@@ -95,22 +95,26 @@ The service boat's data follows:
 ### Instructions
 Gotta make sure you have the following dependencies installed in your workspace:
 
-- The [dmac ROS driver](): we need the message definitions for the Evologics USBL.
-- Same for the AHRS data, you need the [sbg ROS driver]().
+- The [dmac ROS driver](https://github.com/aldoteran/dmac.git): we need the message definitions for the Evologics USBL.
+- Same for the AHRS data, you need the [sbg ROS driver](https://github.com/SBG-Systems/sbg_ros_driver.git).
 
 To set up the TF tree and the robot model LoLo, you need
 
 - the [asko-2024 branch of lolo\_common]().
 
+and for the service boat
+
+- the asko-2024 branch of the [usbl\_tools](https://github.com/aldoteran/usbl_tools/tree/asko_2024) package.
+
 Download the datasets from our OneDrive server [here](https://kth-my.sharepoint.com/:f:/g/personal/aldot_ug_kth_se/ElmUbhEgi4hJmvrfleEpzFIB8VFTXjCV7zBi3iisAOBAOw?e=FyPgI3).
 Now, run a `roscore` in a separate terminal and get it out of the way. Set the rosparam `use_sim_time` to
 `true`. Next, run the RViz configuration from this repo:
-- `rosrun rviz rviz -d /path/to/this/repo/config/asko_2024.rviz`
+- `rviz -d /path/to/this/repo/config/asko_2024.rviz`
 For some reason that I don't understand, we must run the `robot_description` for both
 vehicles in order to set up their TF trees (somehow they don't get set up from the rosbags):
 - `roslaunch lolo_description lolo_description.launch`
 and
-- `roslaunch asko_2024_datasets service_boat_description.launch`
+- `roslaunch usbl_tools boat_description.launch`
 You can go ahead and `ctrl-c` both nodes after they've been set up on RViz.
 Finally, go ahead and `rosbag play` any of the datasets.
 
