@@ -110,11 +110,14 @@ Download the datasets from our OneDrive server [here](https://kth-my.sharepoint.
 Now, run a `roscore` in a separate terminal and get it out of the way. Set the rosparam `use_sim_time` to
 `true`. Next, run the RViz configuration from this repo:
 - `rviz -d /path/to/this/repo/config/asko_2024.rviz`
+
 For some reason that I don't understand, we must run the `robot_description` for both
 vehicles in order to set up their TF trees (somehow they don't get set up from the rosbags):
 - `roslaunch lolo_description lolo_description.launch`
+
 and
 - `roslaunch usbl_tools boat_description.launch`
+
 You can go ahead and `ctrl-c` both nodes after they've been set up on RViz.
 Finally, go ahead and `rosbag play` any of the datasets.
 
