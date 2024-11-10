@@ -92,7 +92,7 @@ The topics in the rosbags are divided into a series of namespaces, for LoLo's da
 - `/lolo/dr/`: processed navigation data (dr = dead reckoning), essentially navigation data in friendlier rosmsgs.
 - `/lolo/sensors/`: payload sensor information; the most important here is the `camera/image_mono` topic with the
                     compressed unprocessed image of the backwards-facing camera.
-- `/lolo/perception/`: post-processed data from the acoustic comms (USBL fix), and the calculated relative pose of
+- `/lolo/perception/`: "front-end" post-processed data from the acoustic comms (USBL fix), and the calculated relative pose of
                        the light fiducials wrt the AUV's camera.
 
 The service boat's data follows:
@@ -139,4 +139,7 @@ If all of the above went smoothly, you'll see the following RViz screen.
 - The service boat's filtered navigation in the 2024-06-11-17-28-05 dataset is very noisy.
 It has strange biases and drifts from time to time. Challenging to work with.
 
+- There are a couple of random frames being published to the tf server that should be removed 
+(a random odom to base\_link). The joint state publisher seems to have been publishing two different
+references for the actuators' tfs as well.
 

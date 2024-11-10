@@ -1,0 +1,94 @@
+# Measurement input topics.
+usbl_meas_topic: /sam/sim/usbl
+imu_meas_topic: /sam/sim/imu
+depth_meas_topic: /sam/dr/depth
+dvl_meas_topic: /sam/sim/dvl
+odom_meas_topic: /sam/relative/odom
+dr_meas_topic: /sam/enu/odom
+optical_meas_topic: /sam/perception/target_pose
+
+# ------------- PRIORS -------------
+# Standard deviation of the prior information's translation components [m].
+prior_x_stddev: 1e-6
+prior_y_stddev: 1e-6
+prior_z_stddev: 1e-6
+# Standard deviation of the prior information's rotation components [rad].
+prior_roll_stddev: 0.001
+prior_pitch_stddev: 0.001
+prior_yaw_stddev: 0.001
+# Prior standard deviation on the target's velocity [m/s].
+prior_vel_x_stddev: 0.1
+prior_vel_y_stddev: 0.1
+prior_vel_z_stddev: 0.1
+# ------------- PRIORS -------------
+
+# ------------- NOISE --------------
+# USBL position noise.
+usbl_x_stddev: 1.0
+usbl_y_stddev: 1.0
+usbl_z_stddev: 2.5
+# Initial Bias (if previously estimated)
+init_accel_bias_x: 0.
+init_accel_bias_y: 0.
+init_accel_bias_z: 0.
+init_omega_bias_x: 0.
+init_omega_bias_y: 0.
+init_omega_bias_z: 0.
+# VALUES FOR SBG ELLIPSE A
+# Standard deviation for the linear acceleration measurements [m/s2].
+accel_noise_x: 0.00052925
+accel_noise_y: 0.00052925
+accel_noise_z: 0.00052925
+# Bias standard deviation for the linear acceleration measurements [m/s2]
+accel_bias_x: 8.72151e-6
+accel_bias_y: 8.72151e-6
+accel_bias_z: 8.72151e-6
+# Standard deviation for the angular velocity measurements [???].
+omega_noise_x: 8.43214e-5
+omega_noise_y: 8.43214e-5
+omega_noise_z: 8.43214e-5
+# Bias standard deviation for the angular velocity measurements [rad/s]
+omega_bias_x: 3.05698e-6
+omega_bias_y: 3.05698e-6
+omega_bias_z: 3.05698e-6
+# Measurement frequency [Hz].
+imu_frequency: 25.0
+# ------------- NOISE --------------
+
+# ------------- EXTRINSICS --------------
+# Chaser's camera's extrinsic calibration params. base->camera.
+camera_extrinsics_roll: -1.5707 # [rad]
+camera_extrinsics_pitch: 0.0    # [rad]
+camera_extrinsics_yaw: 1.5707   # [rad]
+camera_extrinsics_x: -0.6561        # [m]
+camera_extrinsics_y: 0.003        # [m]
+camera_extrinsics_z: 0.4935        # [m]
+# Chaser's usbl's extrinsic calibration. base->cusbl.
+ch_usbl_extrinsics_roll: 0.0 # [rad]
+ch_usbl_extrinsics_pitch: 0.0 # [rad]
+ch_usbl_extrinsics_yaw: 0.0   # [rad]
+ch_usbl_extrinsics_x: 1.6103  # [m]
+ch_usbl_extrinsics_y: 0.0966  # [m]
+ch_usbl_extrinsics_z: 0.4802  # [m]
+
+# target's fiducials's extrinsic calibration. sbg->fiducials center.
+fiducials_extrinsics_roll: 1.5707 # [rad]
+fiducials_extrinsics_pitch: 0.0    # [rad]
+fiducials_extrinsics_yaw: -1.5707   # [rad]
+fiducials_extrinsics_x: 0.49        # [m]
+fiducials_extrinsics_y: 0.0        # [m]
+fiducials_extrinsics_z: 2.13        # [m]
+# target's usbl's extrinsic calibration. sbg->tusbl.
+tgt_usbl_extrinsics_roll: 3.14159 # [rad]
+tgt_usbl_extrinsics_pitch: 0.0    # [rad]
+tgt_usbl_extrinsics_yaw: 0.0      # [rad]
+tgt_usbl_extrinsics_x: 0.345        # [m]
+tgt_usbl_extrinsics_y: 0.0        # [m]
+tgt_usbl_extrinsics_z: 2.13        # [m]
+# ------------- EXTRINSICS --------------
+
+
+
+
+
+
