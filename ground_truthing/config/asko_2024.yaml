@@ -9,16 +9,16 @@ optical_meas_topic: /sam/perception/target_pose
 
 # ------------- PRIORS -------------
 # Standard deviation of the prior information's translation components [m].
-prior_x_stddev: 1e-6
-prior_y_stddev: 1e-6
-prior_z_stddev: 1e-6
+prior_x_stddev: 1.0
+prior_y_stddev: 1.0
+prior_z_stddev: 0.1
 # Standard deviation of the prior information's rotation components [rad].
-prior_roll_stddev: 0.001
-prior_pitch_stddev: 0.001
-prior_yaw_stddev: 0.001
+prior_roll_stddev: 0.00001
+prior_pitch_stddev: 0.00001
+prior_yaw_stddev: 0.00001
 # Prior standard deviation on the target's velocity [m/s].
-prior_vel_x_stddev: 0.1
-prior_vel_y_stddev: 0.1
+prior_vel_x_stddev: 0.001
+prior_vel_y_stddev: 0.001
 prior_vel_z_stddev: 0.1
 # ------------- PRIORS -------------
 
@@ -28,29 +28,32 @@ usbl_x_stddev: 1.0
 usbl_y_stddev: 1.0
 usbl_z_stddev: 2.5
 # Initial Bias (if previously estimated)
-init_accel_bias_x: 0.
-init_accel_bias_y: 0.
-init_accel_bias_z: 0.
-init_omega_bias_x: 0.
-init_omega_bias_y: 0.
-init_omega_bias_z: 0.
+init_accel_bias_x: -1.18361506
+init_accel_bias_y: 0.11160959
+init_accel_bias_z: -0.0775727739
+init_omega_bias_x: 0.0115292506
+init_omega_bias_y: -0.00969517923
+init_omega_bias_z: -0.00149639507
+# Initial Bias noise.
+init_accel_bias_stddev: 0.0001
+init_omega_bias_stddev: 0.0001
 # VALUES FOR SBG ELLIPSE A
 # Standard deviation for the linear acceleration measurements [m/s2].
 accel_noise_x: 0.00052925
 accel_noise_y: 0.00052925
 accel_noise_z: 0.00052925
 # Bias standard deviation for the linear acceleration measurements [m/s2]
-accel_bias_x: 8.72151e-6
-accel_bias_y: 8.72151e-6
-accel_bias_z: 8.72151e-6
+accel_bias_x: 0.00000872151
+accel_bias_y: 0.00000872151
+accel_bias_z: 0.00000872151
 # Standard deviation for the angular velocity measurements [???].
-omega_noise_x: 8.43214e-5
-omega_noise_y: 8.43214e-5
-omega_noise_z: 8.43214e-5
+omega_noise_x: 0.0000843214
+omega_noise_y: 0.0000843214
+omega_noise_z: 0.0000843214
 # Bias standard deviation for the angular velocity measurements [rad/s]
-omega_bias_x: 3.05698e-6
-omega_bias_y: 3.05698e-6
-omega_bias_z: 3.05698e-6
+omega_bias_x: 0.00000305698
+omega_bias_y: 0.00000305698
+omega_bias_z: 0.00000305698
 # Measurement frequency [Hz].
 imu_frequency: 25.0
 # ------------- NOISE --------------
