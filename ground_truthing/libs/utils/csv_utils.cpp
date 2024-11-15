@@ -1,7 +1,7 @@
 
 #include "csv_utils.h"
 
-namespace csv_utils{
+namespace csv_utils {
 
 void AppendOpticalKeyframe(std::vector<std::string> &csvdata,
                            const gtsam::Pose3 &meas, const gtsam::Pose3 &chaser,
@@ -64,10 +64,56 @@ void DataToCsvFile(const std::vector<std::string> &data,
                    const std::string &filename) {
 
   std::ofstream csvfile(filename);
-  for (const std::string row : data){
+  for (const std::string row : data) {
     csvfile << row << std::endl;
   }
   csvfile.close();
+}
+
+void ValuesToCsvFile(const gtsam::Values &values,
+                     const std::map<int, double> &timestamps,
+                     const std::string &path_to_data,
+                     const std::vector<int> &optical_frames ,
+                     const std::vector<int> &usbl_frames) {
+  size_t size = values.size() / 3;
+
+  std::vector<std::string> data;
+  data.reserve(size + 1);
+  for (size_t i = 0; i < size; i++) {
+    const gtsam::Pose3 p = values.at<gtsam::Pose3>(X(i));
+    const gtsam::Quaternion q = p.rotation().toQuaternion();
+    const gtsam::Point3 t = p.translation();
+    double s = timestamps.at(i);
+    data.push_back(std::to_string(s) + "," + std::to_string(q.x()) + "," +
+                   std::to_string(q.y()) + "," + std::to_string(q.z()) + "," +
+                   std::to_string(q.w()) + "," + std::to_string(t.x()) + "," +
+                   std::to_string(t.y()) + "," + std::to_string(t.z()));
+  }
+  std::string filename = path_to_data + "full_graph_results.csv";
+  std::cout << "Saving full graph results to " << filename << std::endl;
+  DataToCsvFile(data, filename);
+
+  if (!optical_frames.empty()) {
+    filename = path_to_data + "optical_keyframe_results.csv";
+    std::cout << "Saving optical keyframe results to " << filename << std::endl;
+    SplitKeyframes(data, optical_frames, filename);
+  }
+  if (!usbl_frames.empty()) {
+    filename = path_to_data + "usbl_keyframe_results.csv";
+    std::cout << "Saving usbl keyframe results to " << filename << std::endl;
+    SplitKeyframes(data, usbl_frames, filename);
+  }
+}
+
+void SplitKeyframes(const std::vector<std::string> &data,
+        const std::vector<int> &frames, const std::string &filename) {
+    size_t size = frames.size();
+    std::vector<std::string> frame_data;
+    frame_data.reserve(size);
+    for (int i : frames){
+        frame_data.push_back(data[i]);
+    }
+    DataToCsvFile(frame_data, filename);
 }
 
 } // namespace csv_utils

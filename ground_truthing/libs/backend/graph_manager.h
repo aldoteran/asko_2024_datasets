@@ -21,8 +21,11 @@
 #include <gtsam_unstable/slam/PartialPriorFactor.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+#include <gtsam/nonlinear/ISAM2.h>
 
 #include "utils/csv_utils.h"
+#include "backend/usbl_measurement.h"
+#include "backend/usbl_global_factor.h"
 
 #include <vector>
 #include <iostream>
@@ -42,13 +45,14 @@ public:
   struct Config {
     gtsam::Vector6 target_init_pose_stddev; // [r,p,y,x,y,z] [rad,m]
     gtsam::Vector3 target_init_vel_stddev;  // [x,y,z] [m]
-    gtsam::Vector6 init_imu_bias_stddev;
     gtsam::Vector3 imu_accel_noise_stddev;
     gtsam::Vector3 imu_omega_noise_stddev;
     gtsam::Vector3 imu_accel_bias_stddev;
     gtsam::Vector3 imu_omega_bias_stddev;
     gtsam::Vector3 init_accel_bias;
+    double init_accel_bias_stddev;
     gtsam::Vector3 init_omega_bias;
+    double init_omega_bias_stddev;
     double imu_frequency;             // [hz]
     gtsam::Vector3 usbl_noise_stddev; // [x,y,z] in [m]
     gtsam::Vector6 chaser_camera_extrinsics; // [r,p,y,x,y,z]
@@ -57,20 +61,14 @@ public:
     gtsam::Vector6 target_usbl_extrinsics;
   };
 
-  // Used as input to the TargetUsblFactor.
-  struct UsblMeasurement {
-    gtsam::Point3 t_tu_trans_cu; // Raw measurement. T_Tusbl_trans_Cusbl.
-    gtsam::Pose3 w_tfm_c;        // W_tfm_C.
-    gtsam::Pose3 c_tfm_cu;       // C_tfm_Cusbl.
-    gtsam::Pose3 t_tfm_tu;       // T_tfm_Tusbl.
-  };
-
   // Instantiate the graph manager using a config struct.
   explicit GraphManager(const Config &config);
 
   // Destructor.
   ~GraphManager();
 
+  // Setup ISAM2;
+  void SetupISAM2();
   // Setup the Target's IMU odometer.
   void SetupImuOdometer();
   // Setup the prior factors.
@@ -80,6 +78,7 @@ public:
   // Setup the known noise models..
   void SetupNoises();
 
+  // Store target's navigation solution's global estimate.
   void AddTargetGlobalState(const Eigen::Affine3d &pose,
                            const Eigen::Vector3d &vel,
                            const Eigen::Matrix<double, 6, 6> &cov,
@@ -90,6 +89,9 @@ public:
   void AddChaserGlobalPose(const Eigen::Affine3d &pose,
                            const Eigen::Matrix<double, 6, 6> &cov,
                            double stamp);
+
+  // Update iSAM2 with the current keyframe and optimize.
+  void UpdateISAM2();
 
   // Composes the optical pose with the chaser's current pose and
   // adds a Pose3 unary factor to the target's state.
@@ -120,16 +122,25 @@ public:
   // for optimization.
   void AddImuBetweenFactor();
 
+  // Checks if we've gotten any imu measruements.
+  bool IsImuReady();
+
   void SaveGraph(std::ofstream &filename);
 
   // Optimize the graph once and return the values.
   gtsam::Values OptimizeOnce();
+
+  // Optimize the shit out of the graph.
+  gtsam::Values Optimize4Real();
 
   // Print the graph.
   void Print();
 
   // Print initial estimates.
   void PrintInitialEstimates();
+
+  // Print iSAM2 results.
+  void PrintISAM2Results(const std::string &path_to_data);
 
 private:
   void InitializeGraph();
@@ -138,6 +149,9 @@ private:
 
   // Factor graph to arrange all observations.
   gtsam::NonlinearFactorGraph graph_;
+
+  // iSAM2 solver.
+  gtsam::ISAM2 isam2_;
 
   // Values to capture initial estimates for the new nodes.
   gtsam::Values initial_estimates_;
@@ -167,6 +181,8 @@ private:
   gtsam::imuBias::ConstantBias imu_bias_;
   // IMU bias noise.
   gtsam::noiseModel::Diagonal::shared_ptr imu_bias_noise_;
+  // Initial IMU bias noise.
+  gtsam::noiseModel::Diagonal::shared_ptr init_imu_bias_noise_;
   // Last measurement's stamp.
   double prev_imu_stamp_ = 0;
 
@@ -183,9 +199,17 @@ private:
   bool is_chaser_init = false;
   bool is_target_init = false;
   bool is_graph_init = false;
+  bool hdt_in_ = false;
+  bool gps_in_ = false;
 
-  // Raw measruements by keyframe fro csv file.
+  // Raw measruements by keyframe for csv file.
   std::vector<std::string> csvdata_;
+  // Optical keyframe indices.
+  std::vector<int> optical_frames_;
+  // USBL keyframe indices.
+  std::vector<int> usbl_frames_;
+  // Key -> timestamp map.
+  std::map<int, double> timestamps_;
 };
 
 } // namespace dockslam.

@@ -54,19 +54,21 @@ int main(int argc, char *argv[]){
   nh_.getParam("prior_x_stddev", graph_config.target_init_pose_stddev(3));
   nh_.getParam("prior_y_stddev", graph_config.target_init_pose_stddev(4));
   nh_.getParam("prior_z_stddev", graph_config.target_init_pose_stddev(5));
-  nh_.getParam("target_init_vel_x_stddev",
+  nh_.getParam("prior_vel_x_stddev",
                graph_config.target_init_vel_stddev(0));
-  nh_.getParam("target_init_vel_y_stddev",
+  nh_.getParam("prior_vel_y_stddev",
                graph_config.target_init_vel_stddev(1));
-  nh_.getParam("target_init_vel_z_stddev",
+  nh_.getParam("prior_vel_z_stddev",
                graph_config.target_init_vel_stddev(2));
   // Previously estimated IMU biases.
   nh_.getParam("init_accel_bias_x", graph_config.init_accel_bias(0));
   nh_.getParam("init_accel_bias_y", graph_config.init_accel_bias(1));
   nh_.getParam("init_accel_bias_z", graph_config.init_accel_bias(2));
+  nh_.getParam("init_accel_bias_stddev", graph_config.init_accel_bias_stddev);
   nh_.getParam("init_omega_bias_x", graph_config.init_omega_bias(0));
   nh_.getParam("init_omega_bias_y", graph_config.init_omega_bias(1));
   nh_.getParam("init_omega_bias_z", graph_config.init_omega_bias(2));
+  nh_.getParam("init_omega_bias_stddev", graph_config.init_omega_bias_stddev);
   // Measurement noises. USBL:
   nh_.getParam("usbl_x_stddev", graph_config.usbl_noise_stddev(0));
   nh_.getParam("usbl_y_stddev", graph_config.usbl_noise_stddev(1));
@@ -126,7 +128,7 @@ int main(int argc, char *argv[]){
   const std::string chaser_global_odom_topic = "/lolo/dr/odom";
   const std::string chaser_optical_topic = "/lolo/perception/optical_pose";
   const std::string target_global_odom_topic = "/service_boat/dr/odom";
-  const std::string target_usbl_topic = "/service_boat/enu/usbl_fix";
+  const std::string target_usbl_topic = "/service_boat/usbl_fix";
   const std::string target_imu_topic = "/sbg/imu_data";
   const std::string target_gps_topic = "/sbg/gps_pos";
   const std::string target_hdt_topic = "/sbg/gps_hdt";
@@ -145,6 +147,7 @@ int main(int argc, char *argv[]){
   std::cout << "Processing " << view.size() << " messages." << std::endl;
   int ch_global_odom_count = 0;
   int ch_optical_count = 0;
+  int tgt_global_odom_count = 0;
   int tgt_usbl_count = 0;
   int tgt_imu_count = 0;
   int tgt_gps_count = 0;
@@ -158,7 +161,7 @@ int main(int argc, char *argv[]){
   size_t i = 0;
   // Main for loop. Here we'll get all the data and build the graph.
   BOOST_FOREACH (rosbag::MessageInstance const m, view) {
-    if (i > 1){ break; }
+    //if (i > 1){ break; }
 
     // ------- target global navigation ---------
     if ((m.getTopic() == target_global_odom_topic) ||
@@ -166,7 +169,7 @@ int main(int argc, char *argv[]){
       nav_msgs::Odometry::ConstPtr global_odom_msg =
           m.instantiate<nav_msgs::Odometry>();
       if (global_odom_msg != nullptr) {
-        ch_global_odom_count++;
+        tgt_global_odom_count++;
 
         // Get timestamp.
         double stamp = global_odom_msg->header.stamp.toSec();
@@ -249,7 +252,6 @@ int main(int argc, char *argv[]){
         // Send to graph.
         gm_->AddTargetUsblFix(position, stamp);
 
-        i++;
       }
     // ------- Target usbl position ---------
     //
@@ -268,6 +270,8 @@ int main(int argc, char *argv[]){
                                        imu_msg->gyro.z};
         // Send to graph.
         gm_->AddTargetImu(imu_acc, imu_gyro, stamp);
+
+        std::cout << "Adding imu!" << std::endl;
       }
     // ------- Target imu data ---------
 
@@ -287,12 +291,15 @@ int main(int argc, char *argv[]){
         double x, y, z;
         GeographicLib::UTMUPS::Forward(gps_msg->latitude, gps_msg->longitude,
                                        zone, northp, x, y);
-        const Eigen::Vector3d gps_pos{x - UTM_X, y - UTM_Y, gps_msg->altitude};
-        const Eigen::Vector3d gps_stddev{gps_msg->position_accuracy.x,
-                                         gps_msg->position_accuracy.y,
-                                         gps_msg->position_accuracy.z};
+        // FIXME: let's try to fix the altitude.
+        const Eigen::Vector3d gps_pos{x - UTM_X, y - UTM_Y, 1.55};
+        const Eigen::Vector3d gps_stddev{gps_msg->position_accuracy.x * 0.01,
+                                         gps_msg->position_accuracy.y * 0.01,
+                                         0.000001};
+                                         //gps_msg->position_accuracy.z};
         // Send to graph.
         gm_->AddTargetGps(gps_pos, gps_stddev, stamp);
+        i++;
 
       }
     // ------- Target gps position ---------
@@ -344,17 +351,10 @@ int main(int argc, char *argv[]){
   std::cout << "Got this many target hdt messages: " << tgt_hdt_count
             << std::endl;
 
-
   gm_->Print();
-  gm_->PrintInitialEstimates();
-
-  // Optimize the graph.
-  const gtsam::Values results = gm_->OptimizeOnce();
-  results.print("----------- RESULTS ------------");
-
-  // Save graph .dot file.
-  std::ofstream filename("graph.dot");
-  gm_->SaveGraph(filename);
+  const std::string path_to_data =
+      "/home/aldoteran/docking_ws/src/asko_2024_datasets/ground_truthing/";
+  gm_->PrintISAM2Results(path_to_data);
 
   return 0;
 } // End main.
