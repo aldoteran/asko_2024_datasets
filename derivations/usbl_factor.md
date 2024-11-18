@@ -1,5 +1,52 @@
 # USBL "Global" Factor
 
+## Factor definition
+
+The measurement model $h$ corresponding to this factor is that of the
+composition of translations such that we can compute an estimate of LoLo's
+position with respect to the world frame
+
+\begin{equation}
+h =
+{}^W\mathbf{\hat{t}}_{B/W} =
+  {}^W\mathbf{t}_{L/W} +
+  {}^{W}_{L}\mathbf{R}
+    {}^L\mathbf{t}_{L_u/L} +
+  {}^{W}_{B}\mathbf{R} \left(
+    {}^{B}_{B_u}\mathbf{R}
+      {}^{B_u}\mathbf{t}_{B_u/L_u} +
+    {}^{B}\mathbf{t}_{B/B_u}
+  \right).
+\end{equation}
+
+The covariance $\boldsymbol{\Sigma}_{\mathbf{t}}$ associated is derived in the
+section below. Together with the mean from above, we have that
+
+\begin{equation}
+  h \sim \mathcal{N}({}^W\mathbf{\hat{t}}_{B/W}, \boldsymbol{\Sigma}_{\mathbf{t}}).
+\end{equation}
+
+Thus, the error associated with this factor can be written in the form:
+
+\begin{equation}
+  \epsilon_{\mathbf{t}} = \left|\left|
+    {}^W\mathbf{t}_{B/W} - {}^W\mathbf{\hat{t}}_{B/W}
+  \right|\right|^2_{\boldsymbol{\Sigma_{\epsilon_t}}}
+ ~\sim \mathcal{N}(0, \boldsymbol{\Sigma_{\epsilon_t}}),
+\end{equation}
+
+where ${}^W\mathbf{t}_{B/W}$ is the variable we want to estimate (the boat's
+world position, with an associated covariance
+$\boldsymbol{\Sigma}_{\mathbf{t}_{\text{prior}}}$), and the combined covariance
+$\boldsymbol{\Sigma_{\epsilon_t}}$ takes the form
+
+\begin{equation}
+ \boldsymbol{\Sigma_{\epsilon_t}} =
+   \boldsymbol{\Sigma}_{\mathbf{t}_{\text{prior}}}
+   + \boldsymbol{\Sigma}_{\mathbf{t}}.
+\end{equation}
+
+
 ## Covariance derivation
 
 We re-write the measurement model to simplify the notation a bit in the
@@ -206,7 +253,9 @@ To get the covariance, we must compute $\mathbb{E}[\delta\mathbf{t}
 uncorrelated, so the cross-terms go away, yielding:
 
 \begin{align*}
-  \mathbb{E}[\delta\mathbf{t}\delta\mathbf{t}^\top] &=
+  \mathbb{E}[\delta\mathbf{t}\delta\mathbf{t}^\top]
+  = \boldsymbol{\Sigma}_{\mathbf{t}}
+  &=
     \mathbb{E}[\delta\mathbf{t}_1 \delta\mathbf{t}_1^\top] \\
   &- \mathbb{E}[\delta\mathbf{t}_1 \delta\boldsymbol{\theta}_1^\top]
       \left( \mathbf{\bar{R}}_1 \mathbf{t}_{L_x}^\wedge \right)^\top \\
