@@ -33,12 +33,21 @@
 #include <GeographicLib/UTMUPS.hpp>
 
 #include "utils/ros_eigen_conversions.h"
+#include "utils/tfm_utils.h"
 #include "backend/graph_manager.h"
 
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
+
+Eigen::Matrix2d ToRotMatrix(const double angle_rad) {
+  const double cs = std::cos(angle_rad);
+  const double sn = std::sin(angle_rad);
+  Eigen::Matrix2d rot_mat;
+  rot_mat << cs, -sn, sn, cs;
+  return rot_mat;
+}
 
 int main(int argc, char *argv[]){
 
@@ -161,7 +170,9 @@ int main(int argc, char *argv[]){
   size_t i = 0;
   // Main for loop. Here we'll get all the data and build the graph.
   BOOST_FOREACH (rosbag::MessageInstance const m, view) {
-    //if (i > 1){ break; }
+    //if (i > 139) {
+      //break;
+    //}
 
     // ------- target global navigation ---------
     if ((m.getTopic() == target_global_odom_topic) ||
@@ -186,7 +197,7 @@ int main(int argc, char *argv[]){
         gm_->AddTargetGlobalState(
             pose, vel, dockslam::GtsamPoseCovarianceFromRos(cov), stamp);
 
-        if (is_first_target_odom) {
+        if (!gm_->IsGraphInit()) {
           gm_->SetupPriors();
           is_first_target_odom = false;
         }
@@ -208,6 +219,7 @@ int main(int argc, char *argv[]){
         // Get covariance.
         const Eigen::Matrix<double, 6, 6> cov =
             dockslam::Eigen6x6PoseCovFromPoseCov(global_odom_msg->pose);
+
         // Send to graph.
         gm_->AddChaserGlobalPose(
             pose, dockslam::GtsamPoseCovarianceFromRos(cov), stamp);
@@ -233,7 +245,6 @@ int main(int argc, char *argv[]){
         // Send to graph.
         gm_->AddChaserRelativeOpticalPose(
             pose, dockslam::GtsamPoseCovarianceFromRos(cov), stamp);
-
       }
     // ------- Chaser optical pose ---------
 
@@ -251,10 +262,10 @@ int main(int argc, char *argv[]){
         const Eigen::Vector3d position = dockslam::EigenPositionFromMarker(*usbl_msg);
         // Send to graph.
         gm_->AddTargetUsblFix(position, stamp);
-
+        i++;
       }
     // ------- Target usbl position ---------
-    //
+
     // ------- Target imu data ---------
     } else if ((m.getTopic() == target_imu_topic) ||
                ("/" + m.getTopic() == target_imu_topic)) {
@@ -270,8 +281,6 @@ int main(int argc, char *argv[]){
                                        imu_msg->gyro.z};
         // Send to graph.
         gm_->AddTargetImu(imu_acc, imu_gyro, stamp);
-
-        std::cout << "Adding imu!" << std::endl;
       }
     // ------- Target imu data ---------
 
@@ -291,16 +300,16 @@ int main(int argc, char *argv[]){
         double x, y, z;
         GeographicLib::UTMUPS::Forward(gps_msg->latitude, gps_msg->longitude,
                                        zone, northp, x, y);
-        // FIXME: let's try to fix the altitude.
+        // Since we measured the height of the AHRS wrt the water surface,
+        // we'll add it as evidence with an appropriate noise in the GPSFactor.
         const Eigen::Vector3d gps_pos{x - UTM_X, y - UTM_Y, 1.55};
-        const Eigen::Vector3d gps_stddev{gps_msg->position_accuracy.x * 0.01,
-                                         gps_msg->position_accuracy.y * 0.01,
-                                         0.000001};
+        const Eigen::Vector3d gps_stddev{gps_msg->position_accuracy.x,
+                                         gps_msg->position_accuracy.y,
+                                         0.05};
                                          //gps_msg->position_accuracy.z};
         // Send to graph.
         gm_->AddTargetGps(gps_pos, gps_stddev, stamp);
         i++;
-
       }
     // ------- Target gps position ---------
 
@@ -315,23 +324,16 @@ int main(int argc, char *argv[]){
         double stamp = hdt_msg->header.stamp.toSec();
 
         // Angles are in NED with values from 0 to 360 degs.
-        double heading = hdt_msg->true_heading;
-        // NED -> ENU rotate by +90 degrees to that 0 points East, and add
-        // negative sign since Z is pointing up in ENU.
-        heading = 90.0 - heading;
-        // Make sure it's within 0-360, and map it to -180 to 180.
-        heading = std::fmod(heading, 360.0);
-        if (heading > 180.0) {
-          heading -= 360.0;
-        }
-
+        double heading_deg =
+            dockslam::NedHeadingInEnu((hdt_msg->true_heading), true);
         double heading_stddev = (hdt_msg->true_heading_acc) * M_PI / 180.0;
         // Pitch to ENU as a well, add minus sign.
-        double pitch = -hdt_msg->pitch;
+        double pitch_deg = -hdt_msg->pitch;
         double pitch_stddev = hdt_msg->pitch_acc * M_PI / 180.0;
+
         // Send to graph.
-        gm_->AddTargetHdt(heading * M_PI / 180.0, heading_stddev,
-                          pitch * M_PI / 180.0, pitch_stddev, stamp);
+        gm_->AddTargetHdt(heading_deg * M_PI / 180.0, heading_stddev,
+                          pitch_deg * M_PI / 180.0, pitch_stddev, stamp);
       }
     }
     // ------- Target hdt position ---------
@@ -353,7 +355,8 @@ int main(int argc, char *argv[]){
 
   gm_->Print();
   const std::string path_to_data =
-      "/home/aldoteran/docking_ws/src/asko_2024_datasets/ground_truthing/";
+      //"/home/aldoteran/docking_ws/src/asko_2024_datasets/ground_truthing/";
+      "/tmp/";
   gm_->PrintISAM2Results(path_to_data);
 
   return 0;

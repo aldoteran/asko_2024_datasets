@@ -10,26 +10,57 @@ void AppendOpticalKeyframe(std::vector<std::string> &csvdata,
   // csv file.
   std::string row = std::to_string(stamp) + "," + std::to_string(OPTICAL) + ",";
 
-  // Poses are going to be added as quat + xyz.
-  const gtsam::Quaternion q_meas = meas.rotation().toQuaternion();
-  const gtsam::Quaternion q_chaser = chaser.rotation().toQuaternion();
-  const gtsam::Quaternion q_target = target.rotation().toQuaternion();
+  // TODO: add argument.
+  if (false) {
+    // Poses are going to be added as quat + xyz.
+    const gtsam::Quaternion q_meas = meas.rotation().toQuaternion();
+    const gtsam::Quaternion q_chaser = chaser.rotation().toQuaternion();
+    const gtsam::Quaternion q_target = target.rotation().toQuaternion();
 
-  // Add measured optical pose.
-  row += std::to_string(q_meas.x()) + "," + std::to_string(q_meas.y()) + "," +
-         std::to_string(q_meas.z()) + "," + std::to_string(q_meas.w()) + "," +
-         std::to_string(meas.x()) + "," + std::to_string(meas.y()) + "," +
-         std::to_string(meas.z()) + ",";
+    // Add measured optical pose.
+    row += std::to_string(q_meas.x()) + "," + std::to_string(q_meas.y()) + "," +
+           std::to_string(q_meas.z()) + "," + std::to_string(q_meas.w()) + "," +
+           std::to_string(meas.x()) + "," + std::to_string(meas.y()) + "," +
+           std::to_string(meas.z()) + ",";
+    // Add chaser pose.
+    row += std::to_string(q_chaser.x()) + "," + std::to_string(q_chaser.y()) +
+           "," + std::to_string(q_chaser.z()) + "," +
+           std::to_string(q_chaser.w()) + "," + std::to_string(chaser.x()) +
+           "," + std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) +
+           ",";
+    // Add target pose.
+    row += std::to_string(q_target.x()) + "," + std::to_string(q_target.y()) +
+           "," + std::to_string(q_target.z()) + "," +
+           std::to_string(q_target.w()) + "," + std::to_string(target.x()) +
+           "," + std::to_string(target.y()) + "," + std::to_string(target.z());
+  }
+
+  // Add meas pose.
+  const gtsam::Matrix m_m = meas.rotation().matrix();
+  row += std::to_string(m_m(0, 0)) + "," + std::to_string(m_m(0, 1)) +
+                 "," + std::to_string(m_m(0, 2)) + "," +
+                 std::to_string(m_m(1, 1)) + "," + std::to_string(m_m(1, 2)) +
+                 "," + std::to_string(m_m(2, 2)) + "," +
+                 std::to_string(meas.x()) + "," + std::to_string(meas.y()) +
+                 "," + std::to_string(meas.z()) + ",";
+
   // Add chaser pose.
-  row += std::to_string(q_chaser.x()) + "," + std::to_string(q_chaser.y()) +
-         "," + std::to_string(q_chaser.z()) + "," +
-         std::to_string(q_chaser.w()) + "," + std::to_string(chaser.x()) + "," +
+  const gtsam::Matrix c_m = chaser.rotation().matrix();
+  row += std::to_string(c_m(0, 0)) + "," + std::to_string(c_m(0, 1)) + "," +
+         std::to_string(c_m(0, 2)) + "," + std::to_string(c_m(1, 0)) + "," +
+         std::to_string(c_m(1, 1)) + "," + std::to_string(c_m(1, 2)) + "," +
+         std::to_string(c_m(2, 0)) + "," + std::to_string(c_m(2, 1)) + "," +
+         std::to_string(c_m(2, 2)) + "," + std::to_string(chaser.x()) + "," +
          std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) + ",";
+
   // Add target pose.
-  row += std::to_string(q_target.x()) + "," + std::to_string(q_target.y()) +
-         "," + std::to_string(q_target.z()) + "," +
-         std::to_string(q_target.w()) + "," + std::to_string(target.x()) + "," +
-         std::to_string(target.y()) + "," + std::to_string(target.z());
+  const gtsam::Matrix t_m = target.rotation().matrix();
+  row += std::to_string(t_m(0, 0)) + "," + std::to_string(t_m(0, 1)) + "," +
+         std::to_string(t_m(0, 2)) + "," + std::to_string(t_m(1, 0)) + "," +
+         std::to_string(t_m(1, 1)) + "," + std::to_string(t_m(1, 2)) + "," +
+         std::to_string(t_m(2, 0)) + "," + std::to_string(t_m(2, 1)) + "," +
+         std::to_string(t_m(2, 2)) + "," + std::to_string(target.x()) + "," +
+         std::to_string(target.y()) + "," + std::to_string(target.z()) + ",";
 
   csvdata.push_back(row);
 }
@@ -39,23 +70,48 @@ void AppendUsblKeyframe(std::vector<std::string> &csvdata,
                         const gtsam::Pose3 &target, double stamp) {
   std::string row = std::to_string(stamp) + "," + std::to_string(USBL) + ",";
 
-  // Poses are going to be added as quat + xyz.
-  const gtsam::Quaternion q_chaser = chaser.rotation().toQuaternion();
-  const gtsam::Quaternion q_target = target.rotation().toQuaternion();
+  // TODO: add argument.
+  if (false){
+      // Poses are going to be added as quat + xyz.
+      const gtsam::Quaternion q_chaser = chaser.rotation().toQuaternion();
+      const gtsam::Quaternion q_target = target.rotation().toQuaternion();
+
+      // Add measured usbl position. Add dummy orientation to the measurement.
+      row += "0,0,0,0," + std::to_string(meas.x()) + "," +
+             std::to_string(meas.y()) + "," + std::to_string(meas.z()) + ",";
+      // Add chaser pose.
+      row += std::to_string(q_chaser.x()) + "," + std::to_string(q_chaser.y()) +
+             "," + std::to_string(q_chaser.z()) + "," +
+             std::to_string(q_chaser.w()) + "," + std::to_string(chaser.x()) + "," +
+             std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) + ",";
+      // Add target pose.
+      row += std::to_string(q_target.x()) + "," + std::to_string(q_target.y()) +
+             "," + std::to_string(q_target.z()) + "," +
+             std::to_string(q_target.w()) + "," + std::to_string(target.x()) + "," +
+             std::to_string(target.y()) + "," + std::to_string(target.z());
+  }
 
   // Add measured usbl position. Add dummy orientation to the measurement.
-  row += "0,0,0,0," + std::to_string(meas.x()) + "," +
+  row += "0,0,0,0,0,0,0,0,0," + std::to_string(meas.x()) + "," +
          std::to_string(meas.y()) + "," + std::to_string(meas.z()) + ",";
+
   // Add chaser pose.
-  row += std::to_string(q_chaser.x()) + "," + std::to_string(q_chaser.y()) +
-         "," + std::to_string(q_chaser.z()) + "," +
-         std::to_string(q_chaser.w()) + "," + std::to_string(chaser.x()) + "," +
+  const gtsam::Matrix c_m = chaser.rotation().matrix();
+  row += std::to_string(c_m(0, 0)) + "," + std::to_string(c_m(0, 1)) + "," +
+         std::to_string(c_m(0, 2)) + "," + std::to_string(c_m(1, 0)) + "," +
+         std::to_string(c_m(1, 1)) + "," + std::to_string(c_m(1, 2)) + "," +
+         std::to_string(c_m(2, 0)) + "," + std::to_string(c_m(2, 1)) + "," +
+         std::to_string(c_m(2, 2)) + "," + std::to_string(chaser.x()) + "," +
          std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) + ",";
+
   // Add target pose.
-  row += std::to_string(q_target.x()) + "," + std::to_string(q_target.y()) +
-         "," + std::to_string(q_target.z()) + "," +
-         std::to_string(q_target.w()) + "," + std::to_string(target.x()) + "," +
-         std::to_string(target.y()) + "," + std::to_string(target.z());
+  const gtsam::Matrix t_m = target.rotation().matrix();
+  row += std::to_string(t_m(0, 0)) + "," + std::to_string(t_m(0, 1)) + "," +
+         std::to_string(t_m(0, 2)) + "," + std::to_string(t_m(1, 0)) + "," +
+         std::to_string(t_m(1, 1)) + "," + std::to_string(t_m(1, 2)) + "," +
+         std::to_string(t_m(2, 0)) + "," + std::to_string(t_m(2, 1)) + "," +
+         std::to_string(t_m(2, 2)) + "," + std::to_string(target.x()) + "," +
+         std::to_string(target.y()) + "," + std::to_string(target.z()) + ",";
 
   csvdata.push_back(row);
 }
@@ -81,13 +137,27 @@ void ValuesToCsvFile(const gtsam::Values &values,
   data.reserve(size + 1);
   for (size_t i = 0; i < size; i++) {
     const gtsam::Pose3 p = values.at<gtsam::Pose3>(X(i));
-    const gtsam::Quaternion q = p.rotation().toQuaternion();
-    const gtsam::Point3 t = p.translation();
-    double s = timestamps.at(i);
-    data.push_back(std::to_string(s) + "," + std::to_string(q.x()) + "," +
-                   std::to_string(q.y()) + "," + std::to_string(q.z()) + "," +
-                   std::to_string(q.w()) + "," + std::to_string(t.x()) + "," +
-                   std::to_string(t.y()) + "," + std::to_string(t.z()));
+    // TODO: Make this into if in_quat.
+    if (false){
+      const gtsam::Quaternion q = p.rotation().toQuaternion();
+      const gtsam::Point3 t = p.translation();
+      double s = timestamps.at(i);
+      data.push_back(std::to_string(s) + "," + std::to_string(q.x()) + "," +
+                     std::to_string(q.y()) + "," + std::to_string(q.z()) + "," +
+                     std::to_string(q.w()) + "," + std::to_string(t.x()) + "," +
+                     std::to_string(t.y()) + "," + std::to_string(t.z()));
+    }
+      const gtsam::Point3 t = p.translation();
+      const gtsam::Matrix m = p.rotation().matrix();
+      double s = timestamps.at(i);
+      data.push_back(std::to_string(s) + "," + std::to_string(m(0, 0)) + "," +
+                     std::to_string(m(0, 1)) + "," + std::to_string(m(0, 2)) +
+                     "," + std::to_string(m(1, 0)) + "," +
+                     std::to_string(m(1, 1)) + "," + std::to_string(m(1, 2)) +
+                     "," + std::to_string(m(2, 0)) + "," +
+                     std::to_string(m(2, 1)) + "," + std::to_string(m(2, 2)) +
+                     "," + std::to_string(t.x()) + "," + std::to_string(t.y()) +
+                     "," + std::to_string(t.z()));
   }
   std::string filename = path_to_data + "full_graph_results.csv";
   std::cout << "Saving full graph results to " << filename << std::endl;
