@@ -26,6 +26,7 @@
 #include "utils/csv_utils.h"
 #include "backend/usbl_measurement.h"
 #include "backend/usbl_global_factor.h"
+#include "backend/noise_models.h"
 
 #include <vector>
 #include <iostream>
@@ -125,6 +126,9 @@ public:
   // Checks if we've gotten any imu measruements.
   bool IsImuReady();
 
+  // Checks if we've initialized the graph.
+  bool IsGraphInit();
+
   void SaveGraph(std::ofstream &filename);
 
   // Optimize the graph once and return the values.
@@ -161,16 +165,25 @@ private:
   gtsam::noiseModel::Gaussian::shared_ptr chaser_global_noise_;
   double chaser_pose_stamp_ = 0;
 
+  // HDT heading and pitch measurement for initialization.
+  double true_heading_;
+  double true_heading_noise_;
+  double true_pitch_;
+  double true_pitch_noise_;
+  // Contains the initial target pose.
+  gtsam::Pose3 target_init_pose_;
   // Contains the most recently measured target's odometry.
   gtsam::Pose3 target_odom_pose_;
   // Same for the velocity.
   gtsam::Vector3 target_odom_vel_;
+  // Target's navigation solution uncertainty.
+  gtsam::noiseModel::Gaussian::shared_ptr target_odom_pose_noise_;
   // Contains the most recently predicted target's global pose.
   gtsam::Pose3 target_global_pose_;
   // Same for the velocity.
   gtsam::Vector3 target_vel_;
-  // Target's global uncertainty.
-  gtsam::noiseModel::Gaussian::shared_ptr target_pose_noise_;
+  // Target's estimated pose's marginal covariance.
+  gtsam::noiseModel::Gaussian::shared_ptr target_marginal_noise_;
   // Target's vel velocity uncertainty.
   gtsam::noiseModel::Diagonal::shared_ptr target_vel_noise_;
   // Target's usbl manually tuned uncertainty.
@@ -201,6 +214,7 @@ private:
   bool is_graph_init = false;
   bool hdt_in_ = false;
   bool gps_in_ = false;
+  bool hdt_ready_ = false;
 
   // Raw measruements by keyframe for csv file.
   std::vector<std::string> csvdata_;

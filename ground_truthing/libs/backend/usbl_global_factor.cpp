@@ -69,9 +69,14 @@ Vector UsblGlobalFactor::evaluateError(
 void UsblGlobalFactor::print(const std::string &s,
                              const KeyFormatter &keyFormatter) const {
 
-  // TODO: print something more meaningful.
   std::cout << s << std::endl;
-  std::cout << "USBL Global Factor\n";
+  std::cout << "USBL global factor on " << keyFormatter(this->key())
+            << std::endl;
+  std::cout << "\t USBL measurement mean:" << std::endl;
+  std::cout << z_.t_tu_trans_cu << std::endl;
+  this->noiseModel_->print("  noise model: ");
+  //std::cout << "\t Noise model (covariance):" << std::endl;
+  //std::cout << this->noiseModel_->covariance() << std::endl;
   return this->printKeys(s, keyFormatter);
 }
 

@@ -28,15 +28,21 @@ usbl_x_stddev: 1.0
 usbl_y_stddev: 1.0
 usbl_z_stddev: 2.5
 # Initial Bias (if previously estimated)
-init_accel_bias_x: -1.18361506
-init_accel_bias_y: 0.11160959
-init_accel_bias_z: -0.0775727739
-init_omega_bias_x: 0.0115292506
-init_omega_bias_y: -0.00969517923
-init_omega_bias_z: -0.00149639507
+#init_accel_bias_x: -1.18361506
+#init_accel_bias_y: 0.11160959
+#init_accel_bias_z: -0.0775727739
+#init_omega_bias_x: 0.0115292506
+#init_omega_bias_y: -0.00969517923
+#init_omega_bias_z: -0.00149639507
+init_accel_bias_x: 0.0869525
+init_accel_bias_y: 0.183961944
+init_accel_bias_z: -0.0265742397
+init_omega_bias_x: 0.00380564106
+init_omega_bias_y: -0.000306797758
+init_omega_bias_z: 0.0018205596
 # Initial Bias noise.
-init_accel_bias_stddev: 0.0001
-init_omega_bias_stddev: 0.0001
+init_accel_bias_stddev: 0.50000035
+init_omega_bias_stddev: 0.000005177
 # VALUES FOR SBG ELLIPSE A
 # Standard deviation for the linear acceleration measurements [m/s2].
 accel_noise_x: 0.00052925

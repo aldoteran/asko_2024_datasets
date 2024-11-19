@@ -12,10 +12,10 @@ GraphManager::GraphManager(const Config &config) : config_(config) {
 
 GraphManager::~GraphManager(){
     // Save csv file.
-    std::cout << "Saving ra" << std::endl;
     const std::string filename =
         "/home/aldoteran/docking_ws/src/asko_2024_datasets/ground_truthing/"
         "raw_keyframe_data.csv";
+    std::cout << "Saving raw keframe data in " << filename << std::endl;
     csv_utils::DataToCsvFile(csvdata_, filename);
 }
 
@@ -94,21 +94,12 @@ void GraphManager::SetupExtrinsics() {
                                  config_.chaser_camera_extrinsics(4),
                                  config_.chaser_camera_extrinsics(5)));
   chaser_usbl_extr_ =
-      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.chaser_usbl_extrinsics(2),
+      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.chaser_usbl_extrinsics(0),
                                        config_.chaser_usbl_extrinsics(1),
-                                       config_.chaser_usbl_extrinsics(0)),
+                                       config_.chaser_usbl_extrinsics(2)),
                    gtsam::Point3(config_.chaser_usbl_extrinsics(3),
                                  config_.chaser_usbl_extrinsics(4),
                                  config_.chaser_usbl_extrinsics(5)));
-
-  std::cout << "Chaser to camera extrinsics: " << std::endl;
-  std::cout << chaser_camera_extr_ << std::endl;
-  std::cout << "Chaser to usbl extrinsics: " << std::endl;
-  std::cout << chaser_usbl_extr_ << std::endl;
-  std::cout << "target lights extrinsics: " << std::endl;
-  std::cout << target_fiducial_extr_ << std::endl;
-  std::cout << "target usbl extrinsics: " << std::endl;
-  std::cout << target_usbl_extr_ << std::endl;
 }
 
 void GraphManager::SetupNoises() {
@@ -134,18 +125,25 @@ void GraphManager::SetupNoises() {
 }
 
 void GraphManager::SetupPriors() {
+  if (!hdt_ready_) {
+    return;
+  }
   // Initial uncertainties from config file.
   gtsam::noiseModel::Diagonal::shared_ptr target_init_pose_noise =
       gtsam::noiseModel::Diagonal::Sigmas(config_.target_init_pose_stddev);
   gtsam::noiseModel::Diagonal::shared_ptr target_init_vel_noise =
       gtsam::noiseModel::Diagonal::Sigmas(config_.target_init_vel_stddev);
 
-  const gtsam::Rot3 init_rot =
-      gtsam::Rot3::RzRyRx(target_odom_pose_.rotation().yaw(), 0.0, 0.0);
+  const gtsam::Rot3 init_rot = gtsam::Rot3::Rz(true_heading_) *
+                               gtsam::Rot3::Ry(true_pitch_) *
+                               gtsam::Rot3::Rx(M_PI);
+ gtsam::Rot3::Rz(true_heading_);
+  // gtsam::Rot3::RzRyRx(0.0, 0.0, target_odom_pose_.rotation().yaw());
   const gtsam::Point3 init_pos = target_odom_pose_.translation();
+  target_init_pose_ = gtsam::Pose3(init_rot, init_pos);
 
   // Initialize the values for the target's state.
-  target_global_pose_ = gtsam::Pose3(init_rot, init_pos);
+  target_global_pose_ = target_init_pose_;
   target_vel_ = gtsam::Vector3(0., 0., 0.);
 
   initial_estimates_.insert(X(0), target_global_pose_);
@@ -173,7 +171,7 @@ void GraphManager::AddTargetGlobalState(
     const Eigen::Matrix<double, 6, 6> &pose_cov, double stamp) {
   target_odom_pose_ = gtsam::Pose3(pose.matrix());
   target_odom_vel_ = gtsam::Vector3(vel);
-  target_pose_noise_ =
+  target_odom_pose_noise_ =
       gtsam::noiseModel::Gaussian::Covariance(pose_cov.matrix());
 
   if (!is_target_init){
@@ -185,7 +183,10 @@ void GraphManager::AddChaserGlobalPose(const Eigen::Affine3d &pose,
                                        const Eigen::Matrix<double, 6, 6> &cov,
                                        double stamp) {
   chaser_global_pose_ = gtsam::Pose3(pose.matrix());
-  chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
+  // FIXME: temp covariance since ros message is wrong.
+  //chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
+  chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(gtsam::Matrix6::Identity() * 0.00001);
+
   chaser_pose_stamp_ = stamp;
 
   if (!is_chaser_init) {
@@ -204,11 +205,13 @@ void GraphManager::UpdateISAM2(){
 
   // Full back-substitution at every keyframe.
   gtsam::Values results = isam2_.calculateBestEstimate();
-
   // Update all current values.
   target_global_pose_ = results.at<gtsam::Pose3>(X(cur_frame_));
   target_vel_ = results.at<gtsam::Vector3>(V(cur_frame_));
   imu_bias_ = results.at<gtsam::imuBias::ConstantBias>(B(cur_frame_));
+  // Get marginal covariance of target's current pose.
+  target_marginal_noise_ = gtsam::noiseModel::Gaussian::Covariance(
+      isam2_.marginalCovariance(X(cur_frame_)));
 
   // Reset factor graph.
   graph_.resize(0);
@@ -257,18 +260,22 @@ void GraphManager::AddChaserRelativeOpticalPose(
       return;
   }
 
-  // Compose to get W_tfm_T.
+  // Measurement to Pose3.
   const gtsam::Pose3 cam_tfm_lights(pose.matrix());
+  // Compose mean for factor in the world frame.
   const gtsam::Pose3 w_tfm_t =
       chaser_global_pose_ * chaser_camera_extr_ * cam_tfm_lights * target_fiducial_extr_;
-
-  // TODO: compose covariances as well.
-  const gtsam::Matrix6 covariance /* = bla bla bla */;
-  gtsam::noiseModel::Gaussian::shared_ptr noise =
+  // Measurement noise.
+  gtsam::noiseModel::Gaussian::shared_ptr meas_noise =
       gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
-
+  // Compute factor noise.
+  gtsam::noiseModel::Gaussian::shared_ptr factor_noise;
+  ComputeOpticalGlobalFactorNoise(cam_tfm_lights, factor_noise,
+                                  chaser_camera_extr_, target_fiducial_extr_,
+                                  meas_noise, chaser_global_noise_);
+  // Add factor to graph.
   graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(cur_frame_),
-                                                          w_tfm_t, noise);
+                                                          w_tfm_t, factor_noise);
 
   // Add a between factor and initial conditions from the previous to the
   // current frame using the imu preintegrated.
@@ -308,12 +315,22 @@ void GraphManager::AddTargetUsblFix(const Eigen::Vector3d &pos, double stamp) {
       return;
   }
 
-  // Add prior factor to constrain the global position of the target using the
-  // usbl meas.
+  // Measurement struct.
   const UsblMeasurement meas = {gtsam::Point3(pos), chaser_global_pose_,
                                 chaser_usbl_extr_, target_usbl_extr_};
+  // Best guess for initial conditions.
+  const gtsam::NavState prev_state(target_global_pose_, target_vel_);
+  const gtsam::NavState target_cur_state =
+      odometer_->predict(prev_state, imu_bias_);
+  const gtsam::Pose3 target_cur_pose = target_cur_state.pose();
+  // Noise model for factor.
+  gtsam::noiseModel::Gaussian::shared_ptr usbl_factor_noise;
+  ComputeUsblGlobalFactorNoise(meas, target_cur_pose, usbl_factor_noise,
+                               target_usbl_noise_, chaser_global_noise_,
+                               target_marginal_noise_);
+  // Add custom factor to graph.
   graph_.emplace_shared<gtsam::UsblGlobalFactor>(X(cur_frame_), meas,
-                                                 target_usbl_noise_);
+                                                 usbl_factor_noise);
 
   // Add a between factor and initial conditions from the previous to the
   // current frame using the imu preintegrated.
@@ -359,7 +376,7 @@ void GraphManager::AddTargetGps(const Eigen::Vector3d &gps_pos,
   graph_.emplace_shared<gtsam::GPSFactor>(X(cur_frame_), pos, noise);
   gps_in_ = true;
 
-  if(hdt_in_){
+  if(true){
     AddImuBetweenFactor();
     UpdateISAM2();
     hdt_in_ = false;
@@ -374,6 +391,16 @@ void GraphManager::AddTargetGps(const Eigen::Vector3d &gps_pos,
 void GraphManager::AddTargetHdt(double heading, double heading_stddev,
                                 double pitch, double pitch_stddev,
                                 double stamp) {
+
+  // Store for initialization.
+  true_heading_ = heading;
+  true_heading_noise_ = heading_stddev;
+  true_pitch_ = pitch;
+  true_pitch_noise_ = pitch_stddev;
+  hdt_ready_ = true;
+  hdt_in_ = true;
+  return;
+
   if (!is_graph_init) {
     std::cout << "(AddTargetHdt) Graph not initialized yet!" << std::endl;
     return;
@@ -420,6 +447,10 @@ bool GraphManager::IsImuReady() {
   return true;
 }
 
+bool GraphManager::IsGraphInit() {
+  return is_graph_init;
+}
+
 void GraphManager::AddImuBetweenFactor(){
   if (!is_graph_init) {
     std::cout << "(AddImuBetween) Graph not initialized yet!" << std::endl;
@@ -435,6 +466,30 @@ void GraphManager::AddImuBetweenFactor(){
   initial_estimates_.insert(X(cur_frame_), target_state.pose());
   initial_estimates_.insert(V(cur_frame_), target_state.velocity());
   initial_estimates_.insert(B(cur_frame_), imu_bias_);
+
+  // Uncomment for IMU bias calibration. Assumes zero movement to estimate
+  // the IMU and gyro biases.
+  //initial_estimates_.insert(X(cur_frame_), target_init_pose_);
+  //initial_estimates_.insert(V(cur_frame_), gtsam::Vector3(0., 0., 0.));
+  //initial_estimates_.insert(B(cur_frame_), imu_bias_);
+  //graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(
+      //X(cur_frame_), target_init_pose_,
+      //gtsam::noiseModel::Isotropic::Sigma(6, 0.0001));
+
+  // Since the IMU measurements are pretty shit, we'll constrain the attitude
+  // of the target using the GPS HDT angles and a constant roll.
+  const gtsam::Rot3 target_attitude = gtsam::Rot3::Rz(true_heading_) *
+                                      gtsam::Rot3::Ry(true_pitch_) *
+                                      gtsam::Rot3::Rx(M_PI);
+  // Adding the right translation but will try to avoid double counting it by
+  // adding a large uncertainty to it. +- 5 degree uncertainty in the roll.
+  gtsam::Vector target_attitude_diag(6);
+  target_attitude_diag << 0.0872, true_pitch_noise_, true_heading_noise_, 1e6,
+      1e6, 1e6;
+  graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(
+      X(cur_frame_),
+      gtsam::Pose3(target_attitude, target_global_pose_.translation()),
+      gtsam::noiseModel::Diagonal::Sigmas(target_attitude_diag));
 
   // Add IMU factor.
   graph_.emplace_shared<gtsam::CombinedImuFactor>(
@@ -471,6 +526,14 @@ void GraphManager::PrintInitialEstimates() {
 void GraphManager::PrintISAM2Results(const std::string &path_to_data){
     gtsam::Values results = isam2_.calculateBestEstimate();
     results.print("------------- ISAM2 RESULTS -----------");
+
+    std::cout << " --------- MARGINAL COVARIANCE --------\n";
+    std::cout << "imu bias cov: \n"
+              << isam2_.marginalCovariance(B(cur_frame_ - 1)) << "\n";
+    std::cout << "target pose cov: \n"
+              << isam2_.marginalCovariance(X(cur_frame_ - 1)) << "\n";
+    std::cout << "target vel cov: \n"
+              << isam2_.marginalCovariance(V(cur_frame_ - 1)) << "\n";
 
     csv_utils::ValuesToCsvFile(results, timestamps_, path_to_data, optical_frames_,
                                usbl_frames_);
