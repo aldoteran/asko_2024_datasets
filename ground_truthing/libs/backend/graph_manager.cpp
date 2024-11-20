@@ -67,29 +67,26 @@ void GraphManager::SetupImuOdometer() {
 
 void GraphManager::SetupExtrinsics() {
   // Target extrinsic calibration (SBG to center of light beacons).
-  const gtsam::Rot3 fid_roll = gtsam::Rot3::Rx(config_.target_fiducials_extrinsics(0));
-  const gtsam::Rot3 fid_pitch = gtsam::Rot3::Ry(config_.target_fiducials_extrinsics(1));
-  const gtsam::Rot3 fid_yaw = gtsam::Rot3::Rz(config_.target_fiducials_extrinsics(2));
   target_fiducial_extr_ =
-      gtsam::Pose3(fid_roll * fid_pitch * fid_yaw,
+      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.target_fiducials_extrinsics(0),
+                                       config_.target_fiducials_extrinsics(1),
+                                       config_.target_fiducials_extrinsics(2)),
                    gtsam::Point3(config_.target_fiducials_extrinsics(3),
                                  config_.target_fiducials_extrinsics(4),
                                  config_.target_fiducials_extrinsics(5)));
-  const gtsam::Rot3 usbl_roll = gtsam::Rot3::Rx(config_.target_usbl_extrinsics(0));
-  const gtsam::Rot3 usbl_pitch = gtsam::Rot3::Ry(config_.target_usbl_extrinsics(1));
-  const gtsam::Rot3 usbl_yaw = gtsam::Rot3::Rz(config_.target_usbl_extrinsics(2));
   target_usbl_extr_ =
-      gtsam::Pose3(usbl_roll * usbl_pitch * usbl_yaw,
+      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.target_usbl_extrinsics(0),
+                                       config_.target_usbl_extrinsics(1),
+                                       config_.target_usbl_extrinsics(2)),
                    gtsam::Point3(config_.target_usbl_extrinsics(3),
                                  config_.target_usbl_extrinsics(4),
                                  config_.target_usbl_extrinsics(5)));
 
   // Chaser's camera's extrinsic calibration from base_link to camera_link.
-  const gtsam::Rot3 cam_roll = gtsam::Rot3::Rx(config_.chaser_camera_extrinsics(0));
-  const gtsam::Rot3 cam_pitch = gtsam::Rot3::Ry(config_.chaser_camera_extrinsics(1));
-  const gtsam::Rot3 cam_yaw = gtsam::Rot3::Rz(config_.chaser_camera_extrinsics(2));
   chaser_camera_extr_ =
-      gtsam::Pose3(cam_roll * cam_pitch * cam_yaw,
+      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.chaser_camera_extrinsics(0),
+                                       config_.chaser_camera_extrinsics(1),
+                                       config_.chaser_camera_extrinsics(2)),
                    gtsam::Point3(config_.chaser_camera_extrinsics(3),
                                  config_.chaser_camera_extrinsics(4),
                                  config_.chaser_camera_extrinsics(5)));
@@ -185,7 +182,7 @@ void GraphManager::AddChaserGlobalPose(const Eigen::Affine3d &pose,
   chaser_global_pose_ = gtsam::Pose3(pose.matrix());
   // FIXME: temp covariance since ros message is wrong.
   //chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
-  chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(gtsam::Matrix6::Identity() * 0.00001);
+  chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(gtsam::Matrix6::Identity() * 0.01);
 
   chaser_pose_stamp_ = stamp;
 

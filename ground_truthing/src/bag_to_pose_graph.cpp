@@ -54,6 +54,9 @@ int main(int argc, char *argv[]){
   ros::init(argc, argv, "bag_to_graph");
   ros::NodeHandle nh_;
 
+  bool debug;
+  nh_.getParam("debug", debug);
+
   // Initialize graph here with a config file from the input aguments.
   dockslam::GraphManager::Config graph_config;
   // Priors.
@@ -122,7 +125,6 @@ int main(int argc, char *argv[]){
   nh_.getParam("tgt_usbl_extrinsics_y", graph_config.target_usbl_extrinsics(4));
   nh_.getParam("tgt_usbl_extrinsics_z", graph_config.target_usbl_extrinsics(5));
 
-
   std::unique_ptr<dockslam::GraphManager> gm_ = nullptr;
   gm_ = std::make_unique<dockslam::GraphManager>(graph_config);
 
@@ -152,7 +154,6 @@ int main(int argc, char *argv[]){
   topics.push_back(target_hdt_topic);
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
-  // (debug)
   std::cout << "Processing " << view.size() << " messages." << std::endl;
   int ch_global_odom_count = 0;
   int ch_optical_count = 0;
@@ -161,6 +162,10 @@ int main(int argc, char *argv[]){
   int tgt_imu_count = 0;
   int tgt_gps_count = 0;
   int tgt_hdt_count = 0;
+
+  // Optical outliers.
+  std::vector<int> optical_outliers;
+  nh_.getParam("optical_outliers", optical_outliers);
 
   // Constant UTM offset. What's the best way to do this?
   double UTM_X = 651000.5;
@@ -234,11 +239,30 @@ int main(int argc, char *argv[]){
       if (optical_msg != nullptr) {
         ch_optical_count++;
 
+        // Reject previously detected outliers.
+        auto found = std::find(optical_outliers.begin(), optical_outliers.end(),
+                               ch_optical_count - 1);
+        if (found != optical_outliers.end()) {
+          std::cout << "Filtering outlier at idx " << ch_optical_count - 1
+                    << "\n";
+          continue;
+        }
+
         // Get timestamp.
         double stamp = optical_msg->header.stamp.toSec();
         // Get pose.
         const Eigen::Affine3d pose =
             dockslam::EigenAffineFromPoseCovStamped(*optical_msg);
+
+        if (debug) {
+          auto t = pose.translation();
+          auto gp = gtsam::Pose3(pose.matrix());
+          auto q = gp.rotation().toQuaternion();
+          std::cout << i << "," << q.x() << "," << q.y() << "," << q.z() << ","
+                    << q.w() << "," << t(0) << "," << t(1) << "," << t(2)
+                    << "\n";
+        }
+
         // Get noise.
         const Eigen::Matrix<double, 6, 6> cov =
             dockslam::Eigen6x6PoseCovFromPoseCov(optical_msg->pose);
@@ -262,7 +286,6 @@ int main(int argc, char *argv[]){
         const Eigen::Vector3d position = dockslam::EigenPositionFromMarker(*usbl_msg);
         // Send to graph.
         gm_->AddTargetUsblFix(position, stamp);
-        i++;
       }
     // ------- Target usbl position ---------
 
@@ -309,7 +332,6 @@ int main(int argc, char *argv[]){
                                          //gps_msg->position_accuracy.z};
         // Send to graph.
         gm_->AddTargetGps(gps_pos, gps_stddev, stamp);
-        i++;
       }
     // ------- Target gps position ---------
 
@@ -340,18 +362,20 @@ int main(int argc, char *argv[]){
 
   }
 
-  std::cout << "Got this many chaser global odom messages: "
-            << ch_global_odom_count << std::endl;
-  std::cout << "Got this many chaser optical messages: " << ch_optical_count
-            << std::endl;
-  std::cout << "Got this many target usbl messages: " << tgt_usbl_count
-            << std::endl;
-  std::cout << "Got this many target imu messages: " << tgt_imu_count
-            << std::endl;
-  std::cout << "Got this many target gps messages: " << tgt_gps_count
-            << std::endl;
-  std::cout << "Got this many target hdt messages: " << tgt_hdt_count
-            << std::endl;
+  if (debug) {
+    std::cout << "Got this many chaser global odom messages: "
+              << ch_global_odom_count << std::endl;
+    std::cout << "Got this many chaser optical messages: " << ch_optical_count
+              << std::endl;
+    std::cout << "Got this many target usbl messages: " << tgt_usbl_count
+              << std::endl;
+    std::cout << "Got this many target imu messages: " << tgt_imu_count
+              << std::endl;
+    std::cout << "Got this many target gps messages: " << tgt_gps_count
+              << std::endl;
+    std::cout << "Got this many target hdt messages: " << tgt_hdt_count
+              << std::endl;
+  }
 
   gm_->Print();
   const std::string path_to_data =

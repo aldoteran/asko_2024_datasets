@@ -1,3 +1,5 @@
+# If you want the output to be verbose AF.
+debug: false
 # Measurement input topics.
 usbl_meas_topic: /sam/sim/usbl
 imu_meas_topic: /sam/sim/imu
@@ -65,39 +67,49 @@ imu_frequency: 25.0
 # ------------- NOISE --------------
 
 # ------------- EXTRINSICS --------------
+# Setup the sensor extrinsic calibrations. The extrinsic rotations are
+# built using gtsam::Rot3::RzRyRx, see their documentation for angle convention.
+# Angles increase counterclockwise when looking from the unchanged axis.
+# Rotation multiplication is done in yaw-pitch-roll convention.
 # Chaser's camera's extrinsic calibration params. base->camera.
-camera_extrinsics_roll: -1.5707 # [rad]
-camera_extrinsics_pitch: 0.0    # [rad]
-camera_extrinsics_yaw: 1.5707   # [rad]
+camera_extrinsics_yaw: 1.5707 # [rad]
+camera_extrinsics_pitch: 0.0 # [rad]
+camera_extrinsics_roll: 1.5707 # [rad]
 camera_extrinsics_x: -0.6561        # [m]
 camera_extrinsics_y: 0.003        # [m]
 camera_extrinsics_z: 0.4935        # [m]
 # Chaser's usbl's extrinsic calibration. base->cusbl.
-ch_usbl_extrinsics_roll: 0.0 # [rad]
-ch_usbl_extrinsics_pitch: 0.0 # [rad]
 ch_usbl_extrinsics_yaw: 0.0   # [rad]
+ch_usbl_extrinsics_pitch: 0.0 # [rad]
+ch_usbl_extrinsics_roll: 0.0 # [rad]
 ch_usbl_extrinsics_x: 1.6103  # [m]
 ch_usbl_extrinsics_y: 0.0966  # [m]
 ch_usbl_extrinsics_z: 0.4802  # [m]
 
 # target's fiducials's extrinsic calibration. sbg->fiducials center.
-fiducials_extrinsics_roll: 1.5707 # [rad]
-fiducials_extrinsics_pitch: 0.0    # [rad]
-fiducials_extrinsics_yaw: -1.5707   # [rad]
+fiducials_extrinsics_yaw: 1.5707  # [rad]
+fiducials_extrinsics_pitch: 0.0 # [rad]
+fiducials_extrinsics_roll: -1.5707 # [rad]
 fiducials_extrinsics_x: 0.49        # [m]
 fiducials_extrinsics_y: 0.0        # [m]
 fiducials_extrinsics_z: 2.13        # [m]
 # target's usbl's extrinsic calibration. sbg->tusbl.
-tgt_usbl_extrinsics_roll: 3.14159 # [rad]
-tgt_usbl_extrinsics_pitch: 0.0    # [rad]
 tgt_usbl_extrinsics_yaw: 0.0      # [rad]
+tgt_usbl_extrinsics_pitch: 0.0    # [rad]
+tgt_usbl_extrinsics_roll: 3.14159 # [rad]
 tgt_usbl_extrinsics_x: 0.345        # [m]
 tgt_usbl_extrinsics_y: 0.0        # [m]
 tgt_usbl_extrinsics_z: 2.13        # [m]
 # ------------- EXTRINSICS --------------
 
-
-
+# ------ OPTICAL OUTLIERS --------------
+# Previously identified outliers in the data.
+optical_outliers: [0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,
+        13,  14,  15,  16,  17,  18,  19,  20,  22,  23,  24,  27,  28,
+        29,  32,  34,  36,  37,  38,  39,  41,  44,  45,  46,  47,  48,
+        49,  50,  52,  54,  55,  56,  57,  58,  59,  60,  62,  63,  64,
+        71,  74,  75,  76,  77,  78,  79,  82, 138, 323, 332, 353, 354,
+       399, 400, 401, 402, 456, 458, 489, 493, 494, 557, 650, 653, 655]
 
 
 

@@ -74,7 +74,9 @@ public:
   void SetupImuOdometer();
   // Setup the prior factors.
   void SetupPriors();
-  // Setup the sensor extrinsic calibrations.
+  // Setup the sensor extrinsic calibrations. The extrinsic rotations are
+  // built using gtsam::Rot3::RzRyRx, see their documentation for angle
+  // convention.
   void SetupExtrinsics();
   // Setup the known noise models..
   void SetupNoises();
