@@ -168,7 +168,7 @@ then, using the small-angle approximation $\text{Exp}(\delta\boldsymbol{\theta})
 expression:
 
 \begin{align}
-  \delta \boldsymbol{\theta} &=
+  \delta\boldsymbol{\theta} &=
    (\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4)^\top
              \delta\boldsymbol{\theta}_1 +
   \mathbf{R}_4^\top \delta\boldsymbol{\theta}_3.
@@ -179,7 +179,7 @@ measurements and the optical measurements are uncorrelated, we get the following
 expression with only two terms:
 
 \begin{align*}
-  \mathbb{E}[\delta\mathbf{t}\delta\mathbf{t}^\top]
+  \mathbb{E}[\delta\boldsymbol{\theta}\delta\boldsymbol{\theta}^\top]
   =& (\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4)^\top
   \mathbb{E}[\delta\boldsymbol{\theta}_1 \delta\boldsymbol{\theta}_1^\top]
      (\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4) \\
@@ -195,6 +195,251 @@ $\mathbb{E}[\delta\boldsymbol{\theta}_3 \delta\boldsymbol{\theta}_3^\top]$ is
 the rotational covariance matrix from the optical measurement.
 
 ### Translational covariance
+
+Now let's deal with the translation part. We can just expand the full
+expression:
+
+\begin{align}
+\bar{\mathbf{t}} + \bar{\mathbf{R}} \delta \mathbf{t} =&
+  \bar{\mathbf{R}}_1 \text{Exp}(\delta \boldsymbol{\theta}_1) \mathbf{R}_2
+    \bar{\mathbf{R}}_3 \text{Exp}(\delta \boldsymbol{\theta}_3) \mathbf{t}_4 \\
+    &+
+  \bar{\mathbf{R}}_1 \text{Exp}(\delta \boldsymbol{\theta}_1) \mathbf{R}_2
+    \bar{\mathbf{t}}_3 \\
+    &+
+  \bar{\mathbf{R}}_1 \text{Exp}(\delta \boldsymbol{\theta}_1) \mathbf{R}_2
+    \bar{\mathbf{R}}_3 \delta \mathbf{t}_3 \\
+    &+
+  \bar{\mathbf{R}}_1 \text{Exp}(\delta \boldsymbol{\theta}_1) \mathbf{t}_2 \\
+    &+
+  \bar{\mathbf{t}}_1 \\
+    &+
+  \bar{\mathbf{R}}_1 \delta \mathbf{t}_1,
+\end{align}
+
+which we then keep expanding further using the small-angle approximation for the
+exponential map to obtain:
+
+\begin{align}
+\bar{\mathbf{t}} + \bar{\mathbf{R}} \delta \mathbf{t} \approx&
+  \bar{\mathbf{R}}_1 (I + \delta \boldsymbol{\theta}_1^\wedge) \mathbf{R}_2
+    \bar{\mathbf{R}}_3 (I + \delta \boldsymbol{\theta}_3^\wedge) \mathbf{t}_4 \\
+    &+
+  \bar{\mathbf{R}}_1 (I + \delta \boldsymbol{\theta}_1^\wedge) \mathbf{R}_2
+    \bar{\mathbf{t}}_3 \\
+    &+
+  \bar{\mathbf{R}}_1 (I + \delta \boldsymbol{\theta}_1^\wedge) \mathbf{R}_2
+    \bar{\mathbf{R}}_3 \delta \mathbf{t}_3 \\
+    &+
+  \bar{\mathbf{R}}_1 (I + \delta \boldsymbol{\theta}_1^\wedge) \mathbf{t}_2 \\
+    &+
+  \bar{\mathbf{t}}_1 \\
+    &+
+  \bar{\mathbf{R}}_1 \delta \mathbf{t}_1 \\
+ =&
+   (\bar{\mathbf{R}}_1 +
+     \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge)
+     (\mathbf{R}_2\bar{\mathbf{R}}_3 + \mathbf{R}_2\bar{\mathbf{R}}_3
+       \delta \boldsymbol{\theta}_3^\wedge) \mathbf{t}_4 \\
+    &+
+  (\bar{\mathbf{R}}_1 +
+    \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge) \mathbf{R}_2
+    \bar{\mathbf{t}}_3 \\
+    &+
+  (\bar{\mathbf{R}}_1 +
+   \bar{\mathbf{R}}_1\delta \boldsymbol{\theta}_1^\wedge) \mathbf{R}_2
+    \bar{\mathbf{R}}_3 \delta \mathbf{t}_3 \\
+    &+
+  (\bar{\mathbf{R}}_1 +
+    \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge) \mathbf{t}_2 \\
+    &+
+  \bar{\mathbf{t}}_1 \\
+    &+
+  \bar{\mathbf{R}}_1 \delta \mathbf{t}_1 \\
+ =&
+ \underbrace{
+ \bar{\mathbf{R}}_1 \mathbf{R}_2\bar{\mathbf{R}}_3 \mathbf{t}_4
+ }_{\text{mean}}
+ +
+ \overbrace{
+ \bar{\mathbf{R}}_1 \mathbf{R}_2\bar{\mathbf{R}}_3
+       \delta \boldsymbol{\theta}_3^\wedge \mathbf{t}_4
+  }^{\text{noise}}
+ +
+ \overbrace{
+ \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge
+   \mathbf{R}_2\bar{\mathbf{R}}_3 \mathbf{t}_4
+  }^{\text{noise}}
+ +
+ \overbrace{
+ \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge
+ \mathbf{R}_2\bar{\mathbf{R}}_3
+       \delta \boldsymbol{\theta}_3^\wedge \mathbf{t}_4
+}^{\text{noise (cross)}} \\
+    &+
+ \underbrace{
+  \bar{\mathbf{R}}_1 \mathbf{R}_2 \bar{\mathbf{t}}_3
+ }_{\text{mean}}
+  +
+ \overbrace{
+    \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge
+    \mathbf{R}_2 \bar{\mathbf{t}}_3
+  }^{\text{noise}} \\
+    &+
+ \overbrace{
+  \bar{\mathbf{R}}_1 \mathbf{R}_2 \bar{\mathbf{R}}_3 \delta \mathbf{t}_3
+  }^{\text{noise}}
+  +
+ \overbrace{
+   \bar{\mathbf{R}}_1\delta \boldsymbol{\theta}_1^\wedge \mathbf{R}_2
+    \bar{\mathbf{R}}_3 \delta \mathbf{t}_3
+  }^{\text{noise (cross)}} \\
+    &+
+ \underbrace{
+  \bar{\mathbf{R}}_1 \mathbf{t}_2
+ }_{\text{mean}}
+  +
+ \overbrace{
+    \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge \mathbf{t}_2
+  }^{\text{noise}} \\
+    &+
+ \underbrace{
+  \bar{\mathbf{t}}_1
+ }_{\text{mean}} \\
+    &+
+ \overbrace{
+  \bar{\mathbf{R}}_1 \delta \mathbf{t}_1
+  }^{\text{noise}}.
+\end{align}
+
+We can now just throw away all the "mean" terms, as well as the "cross" noise
+terms (since they'll go away anyways), since we just want to deal with the
+perturbation. That leaves us with the expression:
+
+\begin{align}
+\bar{\mathbf{R}} \delta \mathbf{t} &=
+  \bar{\mathbf{R}}_1 \mathbf{R}_2\bar{\mathbf{R}}_3
+       \delta \boldsymbol{\theta}_3^\wedge \mathbf{t}_4
+  +
+ \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge
+   \mathbf{R}_2\bar{\mathbf{R}}_3 \mathbf{t}_4
+  +
+ \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge
+    \mathbf{R}_2 \bar{\mathbf{t}}_3
+  +
+ \bar{\mathbf{R}}_1 \mathbf{R}_2 \bar{\mathbf{R}}_3 \delta \mathbf{t}_3
+  +
+ \bar{\mathbf{R}}_1 \delta \boldsymbol{\theta}_1^\wedge \mathbf{t}_2
+  +
+  \bar{\mathbf{R}}_1 \delta \mathbf{t}_1 \\
+&=
+ - \bar{\mathbf{R}}_1 \mathbf{R}_2\bar{\mathbf{R}}_3
+     \mathbf{t}_4^\wedge \delta\boldsymbol{\theta}_3
+  -
+ \bar{\mathbf{R}}_1
+ \left( \mathbf{R}_2\bar{\mathbf{R}}_3 \mathbf{t}_4 \right)^\wedge
+  \delta\boldsymbol{\theta}_1
+  -
+ \bar{\mathbf{R}}_1 \left( \mathbf{R}_2 \bar{\mathbf{t}}_3 \right)^\wedge
+   \delta\boldsymbol{\theta}_1
+  +
+ \bar{\mathbf{R}}_1 \mathbf{R}_2 \bar{\mathbf{R}}_3 \delta \mathbf{t}_3
+  -
+ \bar{\mathbf{R}}_1 \mathbf{t}_2^\wedge \delta\boldsymbol{\theta}_1
+  +
+  \bar{\mathbf{R}}_1 \delta \mathbf{t}_1 \\
+&=
+ - \bar{\mathbf{R}}_1 \mathbf{R}_2\bar{\mathbf{R}}_3
+     \mathbf{t}_4^\wedge \delta\boldsymbol{\theta}_3
+  - \left(
+ \bar{\mathbf{R}}_1
+ \left(
+   \mathbf{R}_2\bar{\mathbf{R}}_3 \mathbf{t}_4 \right)^\wedge +
+   \bar{\mathbf{R}}_1 \left( \mathbf{R}_2 \bar{\mathbf{t}}_3 \right)^\wedge +
+   \bar{\mathbf{R}}_1 \mathbf{t}_2^\wedge
+ \right )
+  \delta\boldsymbol{\theta}_1
+  +
+ \bar{\mathbf{R}}_1 \mathbf{R}_2 \bar{\mathbf{R}}_3 \delta \mathbf{t}_3
+  +
+  \bar{\mathbf{R}}_1 \delta \mathbf{t}_1.
+\end{align}
+
+At this point, I think we can just remove the LHS rotation by multiplying by its
+transpose, which will give us
+
+\begin{align}
+\delta\mathbf{t} &=
+ -
+ \underbrace{
+ \bar{\mathbf{R}}^\top \bar{\mathbf{R}}_1 \mathbf{R}_2\bar{\mathbf{R}}_3
+     \mathbf{t}_4^\wedge
+ }_{\triangleq A}
+     \delta\boldsymbol{\theta}_3
+  -
+ \underbrace{
+  \bar{\mathbf{R}}^\top \left(
+ \bar{\mathbf{R}}_1
+ \left(
+   \mathbf{R}_2\bar{\mathbf{R}}_3 \mathbf{t}_4 \right)^\wedge +
+   \bar{\mathbf{R}}_1 \left( \mathbf{R}_2 \bar{\mathbf{t}}_3 \right)^\wedge +
+   \bar{\mathbf{R}}_1 \mathbf{t}_2^\wedge
+ \right )
+ }_{\triangleq B}
+  \delta\boldsymbol{\theta}_1
+  +
+ \underbrace{
+ \bar{\mathbf{R}}^\top \bar{\mathbf{R}}_1
+   \mathbf{R}_2 \bar{\mathbf{R}}_3
+ }_{\triangleq C}
+   \delta\mathbf{t}_3
+  +
+ \underbrace{
+ \bar{\mathbf{R}}^\top \bar{\mathbf{R}}_1
+ }_{\triangleq D}
+ \delta\mathbf{t}_1,
+\end{align}
+
+and then proceed to take the expectation
+
+\begin{align*}
+  \mathbb{E}[\delta\mathbf{t}\delta\mathbf{t}^\top]
+  =&
+  A
+  \mathbb{E}[\delta\boldsymbol{\theta}_3 \delta\boldsymbol{\theta}_3^\top]
+  A^\top \\
+  &+
+  A
+  \mathbb{E}[\delta\boldsymbol{\theta}_3 \delta\boldsymbol{t}_3^\top]
+  C^\top \\
+  &+
+  C
+  \mathbb{E}[\delta\boldsymbol{t}_3 \delta\boldsymbol{t}_3^\top]
+  C^\top \\
+  &+
+  C
+  \mathbb{E}[\delta\boldsymbol{t}_3 \delta\boldsymbol{\theta}_3^\top]
+  A^\top \\
+  &+
+  B
+  \mathbb{E}[\delta\boldsymbol{\theta}_1 \delta\boldsymbol{\theta}_1^\top]
+  B^\top \\
+  &-
+  B
+  \mathbb{E}[\delta\boldsymbol{\theta}_1 \delta\boldsymbol{t}_1^\top]
+  D^\top \\
+  &+
+  D
+  \mathbb{E}[\delta\boldsymbol{t}_1 \delta\boldsymbol{t}_1^\top]
+  D^\top \\
+  &-
+  D
+  \mathbb{E}[\delta\boldsymbol{t}_1 \delta\boldsymbol{\theta}_1^\top]
+  B^\top,
+\end{align*}
+
+which uses LoLo's and the optical measurement's rotational, translational, and
+cross-term covariance blocks.
 
 ### Cross-terms covariance
 
