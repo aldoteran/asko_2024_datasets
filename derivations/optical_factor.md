@@ -443,4 +443,38 @@ cross-term covariance blocks.
 
 ### Cross-terms covariance
 
+This one is pretty easy. We simplify the rotation perturbation expression as
+
+\begin{align}
+  \delta\boldsymbol{\theta} &=
+   (\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4)^\top
+             \delta\boldsymbol{\theta}_1 +
+  \mathbf{R}_4^\top \delta\boldsymbol{\theta}_3 \\
+  &=
+  \alpha \delta\boldsymbol{\theta}_1 +
+  \beta \delta\boldsymbol{\theta}_3,
+\end{align}
+
+we can just take the expectation of the cross terms and obtain:
+
+\begin{align*}
+  \mathbb{E}[\delta\boldsymbol{\theta}\delta\mathbf{t}^\top]
+  =&
+  -
+  \alpha
+  \mathbb{E}[\delta\boldsymbol{\theta}_1 \delta\boldsymbol{\theta}_1^\top]
+  B^\top \\
+  &+
+  \alpha
+  \mathbb{E}[\delta\boldsymbol{\theta}_1 \delta\boldsymbol{t}_1^\top]
+  D^\top \\
+  &-
+  \beta
+  \mathbb{E}[\delta\boldsymbol{\theta}_3 \delta\boldsymbol{\theta}_3^\top]
+  A^\top \\
+  &+
+  \beta
+  \mathbb{E}[\delta\boldsymbol{\theta}_3 \delta\boldsymbol{t}_3^\top]
+  C^\top.
+\end{align*}
 
