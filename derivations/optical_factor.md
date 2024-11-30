@@ -148,8 +148,51 @@ We then apply these properties to massage the following expression:
              \delta\boldsymbol{\theta}_1)
   \text{Exp}(\mathbf{R}_4^\top \delta\boldsymbol{\theta}_3)}_{
     \text{Exp}(\delta \boldsymbol{\theta})
-  }
+  }.
 \end{align}
+
+Ok, so we can express our rotation's noise as:
+
+\begin{align}
+  \text{Exp}(\delta \boldsymbol{\theta}) &=
+  \text{Exp}((\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4)^\top
+             \delta\boldsymbol{\theta}_1)
+  \text{Exp}(\mathbf{R}_4^\top \delta\boldsymbol{\theta}_3) \\
+  &\approx \text{Exp}((\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4)^\top
+             \delta\boldsymbol{\theta}_1 +
+  \mathbf{R}_4^\top \delta\boldsymbol{\theta}_3),
+\end{align}
+
+then, using the small-angle approximation $\text{Exp}(\delta\boldsymbol{\theta})
+\approx I + \delta\boldsymbol{\theta}^\wedge$, we can finally get the
+expression:
+
+\begin{align}
+  \delta \boldsymbol{\theta} &=
+   (\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4)^\top
+             \delta\boldsymbol{\theta}_1 +
+  \mathbf{R}_4^\top \delta\boldsymbol{\theta}_3.
+\end{align}
+
+Now, on to the good part, let's take the expectation. Using the fact that LoLo's
+measurements and the optical measurements are uncorrelated, we get the following
+expression with only two terms:
+
+\begin{align*}
+  \mathbb{E}[\delta\mathbf{t}\delta\mathbf{t}^\top]
+  =& (\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4)^\top
+  \mathbb{E}[\delta\boldsymbol{\theta}_1 \delta\boldsymbol{\theta}_1^\top]
+     (\mathbf{R}_2 \bar{\mathbf{R}}_3 \mathbf{R}_4) \\
+  &+
+  \mathbf{R}_4^\top
+  \mathbb{E}[\delta\boldsymbol{\theta}_3 \delta\boldsymbol{\theta}_3^\top]
+  \mathbf{R}_4,
+\end{align*}
+
+where $\mathbb{E}[\delta\boldsymbol{\theta}_1 \delta\boldsymbol{\theta}_1^\top]$
+is the rotational covariance matrix from LoLo's INS measurement, and
+$\mathbb{E}[\delta\boldsymbol{\theta}_3 \delta\boldsymbol{\theta}_3^\top]$ is
+the rotational covariance matrix from the optical measurement.
 
 ### Translational covariance
 
