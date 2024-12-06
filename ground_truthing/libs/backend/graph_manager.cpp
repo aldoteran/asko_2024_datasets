@@ -67,33 +67,41 @@ void GraphManager::SetupImuOdometer() {
 
 void GraphManager::SetupExtrinsics() {
   // Target extrinsic calibration (SBG to center of light beacons).
-  target_fiducial_extr_ =
-      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.target_fiducials_extrinsics(0),
-                                       config_.target_fiducials_extrinsics(1),
-                                       config_.target_fiducials_extrinsics(2)),
-                   gtsam::Point3(config_.target_fiducials_extrinsics(3),
-                                 config_.target_fiducials_extrinsics(4),
-                                 config_.target_fiducials_extrinsics(5)));
-  target_usbl_extr_ =
-      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.target_usbl_extrinsics(0),
-                                       config_.target_usbl_extrinsics(1),
-                                       config_.target_usbl_extrinsics(2)),
+  t_tfm_fid_ = gtsam::Pose3(
+      gtsam::Rot3::Quaternion(config_.target_fiducials_extrinsics(3),
+                              config_.target_fiducials_extrinsics(0),
+                              config_.target_fiducials_extrinsics(1),
+                              config_.target_fiducials_extrinsics(2)),
+      gtsam::Point3(config_.target_fiducials_extrinsics(4),
+                    config_.target_fiducials_extrinsics(5),
+                    config_.target_fiducials_extrinsics(6)));
+  // Inverse (light beacons to SBG).
+  fid_tfm_t_ = t_tfm_fid_.inverse();
+  // SBG to USBL acoustic center.
+  t_tfm_tusbl_ =
+      gtsam::Pose3(gtsam::Rot3::Ypr(config_.target_usbl_extrinsics(2),
+                                    config_.target_usbl_extrinsics(1),
+                                    config_.target_usbl_extrinsics(0)),
                    gtsam::Point3(config_.target_usbl_extrinsics(3),
                                  config_.target_usbl_extrinsics(4),
                                  config_.target_usbl_extrinsics(5)));
 
   // Chaser's camera's extrinsic calibration from base_link to camera_link.
-  chaser_camera_extr_ =
-      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.chaser_camera_extrinsics(0),
-                                       config_.chaser_camera_extrinsics(1),
-                                       config_.chaser_camera_extrinsics(2)),
-                   gtsam::Point3(config_.chaser_camera_extrinsics(3),
-                                 config_.chaser_camera_extrinsics(4),
-                                 config_.chaser_camera_extrinsics(5)));
-  chaser_usbl_extr_ =
-      gtsam::Pose3(gtsam::Rot3::RzRyRx(config_.chaser_usbl_extrinsics(0),
-                                       config_.chaser_usbl_extrinsics(1),
-                                       config_.chaser_usbl_extrinsics(2)),
+  c_tfm_cam_ =
+      gtsam::Pose3(gtsam::Rot3::Quaternion(config_.chaser_camera_extrinsics(3),
+                                           config_.chaser_camera_extrinsics(0),
+                                           config_.chaser_camera_extrinsics(1),
+                                           config_.chaser_camera_extrinsics(2)),
+                   gtsam::Point3(config_.chaser_camera_extrinsics(4),
+                                 config_.chaser_camera_extrinsics(5),
+                                 config_.chaser_camera_extrinsics(6)));
+  // Inverse, camera to baser_link.
+  cam_tfm_c_ = c_tfm_cam_.inverse();
+  // Chaser base_link to chaser's USBL.
+  c_tfm_cusbl_ =
+      gtsam::Pose3(gtsam::Rot3::Ypr(config_.chaser_usbl_extrinsics(2),
+                                    config_.chaser_usbl_extrinsics(1),
+                                    config_.chaser_usbl_extrinsics(0)),
                    gtsam::Point3(config_.chaser_usbl_extrinsics(3),
                                  config_.chaser_usbl_extrinsics(4),
                                  config_.chaser_usbl_extrinsics(5)));
@@ -118,6 +126,14 @@ void GraphManager::SetupNoises() {
       config_.init_omega_bias_stddev, config_.init_omega_bias_stddev,
       config_.init_omega_bias_stddev;
   init_imu_bias_noise_ = gtsam::noiseModel::Diagonal::Sigmas(init_imu_bias_sigmas);
+
+  // Optical measurement noise model.
+  gtsam::Vector optical_meas_sigmas(6);
+  optical_meas_sigmas << config_.optical_rot_stddev,
+      config_.optical_rot_stddev, config_.optical_rot_stddev,
+      config_.optical_trans_stddev, config_.optical_trans_stddev,
+      config_.optical_trans_stddev;
+  optical_meas_noise_ = gtsam::noiseModel::Diagonal::Sigmas(optical_meas_sigmas);
 
 }
 
@@ -180,10 +196,7 @@ void GraphManager::AddChaserGlobalPose(const Eigen::Affine3d &pose,
                                        const Eigen::Matrix<double, 6, 6> &cov,
                                        double stamp) {
   chaser_global_pose_ = gtsam::Pose3(pose.matrix());
-  // FIXME: temp covariance since ros message is wrong.
-  //chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
-  chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(gtsam::Matrix6::Identity() * 0.01);
-
+  chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
   chaser_pose_stamp_ = stamp;
 
   if (!is_chaser_init) {
@@ -258,18 +271,23 @@ void GraphManager::AddChaserRelativeOpticalPose(
   }
 
   // Measurement to Pose3.
-  const gtsam::Pose3 cam_tfm_lights(pose.matrix());
+  const gtsam::Pose3 cam_tfm_fid(pose.matrix());
   // Compose mean for factor in the world frame.
   const gtsam::Pose3 w_tfm_t =
-      chaser_global_pose_ * chaser_camera_extr_ * cam_tfm_lights * target_fiducial_extr_;
+      chaser_global_pose_ * c_tfm_cam_ * cam_tfm_fid * fid_tfm_t_ ;
+  // TODO:
+  std::cout << "Projected target pose:\n" << w_tfm_t << "\n";
+  std::cout << "chaser * cam\n " << chaser_global_pose_ * c_tfm_cam_ << "\n";
+  std::cout << "chaser * cam * meas\n "
+            << chaser_global_pose_ * c_tfm_cam_ * cam_tfm_fid << "\n";
   // Measurement noise.
   gtsam::noiseModel::Gaussian::shared_ptr meas_noise =
       gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
   // Compute factor noise.
   gtsam::noiseModel::Gaussian::shared_ptr factor_noise;
-  ComputeOpticalGlobalFactorNoise(cam_tfm_lights, factor_noise,
-                                  chaser_camera_extr_, target_fiducial_extr_,
-                                  meas_noise, chaser_global_noise_);
+  ComputeOpticalGlobalFactorNoise(
+      cam_tfm_fid, factor_noise, c_tfm_cam_, fid_tfm_t_,
+      /*meas_noise*/ optical_meas_noise_, chaser_global_noise_);
   // Add factor to graph.
   graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(cur_frame_),
                                                           w_tfm_t, factor_noise);
@@ -285,9 +303,10 @@ void GraphManager::AddChaserRelativeOpticalPose(
   optical_frames_.push_back(cur_frame_);
   cur_frame_++;
 
-  csv_utils::AppendOpticalKeyframe(csvdata_, cam_tfm_lights,
+  // Logging.
+  csv_utils::AppendOpticalKeyframe(csvdata_, cam_tfm_fid,
                                    chaser_global_pose_, target_odom_pose_,
-                                   stamp);
+                                   stamp, /*as_quat=*/true);
 }
 
 void GraphManager::AddTargetUsblFix(const Eigen::Vector3d &pos, double stamp) {
@@ -314,7 +333,7 @@ void GraphManager::AddTargetUsblFix(const Eigen::Vector3d &pos, double stamp) {
 
   // Measurement struct.
   const UsblMeasurement meas = {gtsam::Point3(pos), chaser_global_pose_,
-                                chaser_usbl_extr_, target_usbl_extr_};
+                                c_tfm_cusbl_, t_tfm_tusbl_};
   // Best guess for initial conditions.
   const gtsam::NavState prev_state(target_global_pose_, target_vel_);
   const gtsam::NavState target_cur_state =
@@ -342,7 +361,7 @@ void GraphManager::AddTargetUsblFix(const Eigen::Vector3d &pos, double stamp) {
 
   csv_utils::AppendUsblKeyframe(csvdata_, gtsam::Point3(pos),
                                 chaser_global_pose_, target_odom_pose_,
-                                stamp);
+                                stamp, /*as_quat=*/true);
 }
 
 void GraphManager::AddTargetImu(const Eigen::Vector3d &acc,
@@ -520,7 +539,7 @@ void GraphManager::PrintInitialEstimates() {
   initial_estimates_.print("---------INITIAL ESTIMATES----------");
 }
 
-void GraphManager::PrintISAM2Results(const std::string &path_to_data){
+gtsam::Values GraphManager::PrintISAM2Results(const std::string &path_to_data){
     gtsam::Values results = isam2_.calculateBestEstimate();
     results.print("------------- ISAM2 RESULTS -----------");
 
@@ -534,6 +553,10 @@ void GraphManager::PrintISAM2Results(const std::string &path_to_data){
 
     csv_utils::ValuesToCsvFile(results, timestamps_, path_to_data, optical_frames_,
                                usbl_frames_);
+
+    return results;
 }
+
+std::map<int, double> GraphManager::GetTimestamps() { return timestamps_; }
 
 } // namespace dockslam.

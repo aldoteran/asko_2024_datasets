@@ -54,11 +54,13 @@ public:
     double init_accel_bias_stddev;
     gtsam::Vector3 init_omega_bias;
     double init_omega_bias_stddev;
-    double imu_frequency;             // [hz]
-    gtsam::Vector3 usbl_noise_stddev; // [x,y,z] in [m]
-    gtsam::Vector6 chaser_camera_extrinsics; // [r,p,y,x,y,z]
+    double imu_frequency;                    // [hz]
+    gtsam::Vector3 usbl_noise_stddev;        // [x,y,z] in [m]
+    double optical_rot_stddev;               // [rad]
+    double optical_trans_stddev;             // [m]
+    gtsam::Vector7 chaser_camera_extrinsics; // [qx,qy,qz,qw,x,y,z]
     gtsam::Vector6 chaser_usbl_extrinsics;
-    gtsam::Vector6 target_fiducials_extrinsics;
+    gtsam::Vector7 target_fiducials_extrinsics;
     gtsam::Vector6 target_usbl_extrinsics;
   };
 
@@ -145,8 +147,11 @@ public:
   // Print initial estimates.
   void PrintInitialEstimates();
 
-  // Print iSAM2 results.
-  void PrintISAM2Results(const std::string &path_to_data);
+  // Print iSAM2 results and return them.
+  gtsam::Values PrintISAM2Results(const std::string &path_to_data);
+
+  // Return timestamp map for keyframes.
+  std::map<int, double> GetTimestamps();
 
 private:
   void InitializeGraph();
@@ -190,6 +195,8 @@ private:
   gtsam::noiseModel::Diagonal::shared_ptr target_vel_noise_;
   // Target's usbl manually tuned uncertainty.
   gtsam::noiseModel::Diagonal::shared_ptr target_usbl_noise_;
+  // Chaser's optical relative pose's manually tuned uncertainty.
+  gtsam::noiseModel::Diagonal::shared_ptr optical_meas_noise_;
   // Target's preint imu odometer.
   std::shared_ptr<gtsam::PreintegratedCombinedMeasurements> odometer_ = nullptr;
   // Current IMU bias.
@@ -202,10 +209,15 @@ private:
   double prev_imu_stamp_ = 0;
 
   // Sensor extrinsic calibrations.
-  gtsam::Pose3 chaser_camera_extr_; // C_tfm_cam.
-  gtsam::Pose3 chaser_usbl_extr_; // C_tfm_cusbl.
-  gtsam::Pose3 target_usbl_extr_; // T_tfm_tusbl.
-  gtsam::Pose3 target_fiducial_extr_; // T_tfm_fiducial.
+  gtsam::Pose3 c_tfm_cam_; // C_tfm_cam.
+  gtsam::Pose3 c_tfm_cusbl_; // C_tfm_cusbl.
+  gtsam::Pose3 t_tfm_tusbl_; // T_tfm_tusbl.
+  gtsam::Pose3 t_tfm_fid_; // T_tfm_fiducial.
+  // And their inverses.
+  gtsam::Pose3 cam_tfm_c_;
+  gtsam::Pose3 cusbl_tfm_c_;
+  gtsam::Pose3 tusbl_tfm_t_;
+  gtsam::Pose3 fid_tfm_t_;
 
   // Variable for keeping track of the number of keyframes in the graph.
   // Counter should be increased at the end of the keyframed function.

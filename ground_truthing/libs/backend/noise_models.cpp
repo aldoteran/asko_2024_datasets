@@ -64,6 +64,7 @@ void ComputeOpticalGlobalFactorNoise(
  // Chaser covariances.
  const gtsam::Matrix c_cov = chaser_noise->covariance();
  const gtsam::Matrix c_rot_cov = c_cov.block(0, 0, 3, 3);
+ const gtsam::Matrix c_t_cov = c_cov.block(3, 3, 3, 3);
  // Measurement covariances.
  const gtsam::Matrix z_cov = chaser_noise->covariance();
  const gtsam::Matrix z_rot_cov = c_cov.block(0, 0, 3, 3);
@@ -87,6 +88,10 @@ void ComputeOpticalGlobalFactorNoise(
  // --------- translation covariance ----------
  gtsam::Matrix factor_cov = gtsam::Matrix6::Identity();
  factor_cov.block(0,0,3,3) *= first + second;
+ // FIXME: this has to be the real covariance we derived.
+ factor_cov.block(3,3,3,3) = c_t_cov;
+
+ std::cout << "Optical factor cov: \n" << factor_cov.matrix() << "\n";
 
  factor_noise = gtsam::noiseModel::Gaussian::Covariance(factor_cov);
 }
