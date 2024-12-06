@@ -1,0 +1,133 @@
+# If you want the output to be verbose AF.
+debug: false
+# If you want to append the results to the rosbag.
+append_results: false
+
+# ------------- PRIORS -------------
+# Standard deviation of the prior information's translation components [m].
+prior_x_stddev: 5.0
+prior_y_stddev: 5.0
+prior_z_stddev: 0.1
+# Standard deviation of the prior information's rotation components [rad].
+prior_roll_stddev: 0.00001
+prior_pitch_stddev: 0.00001
+prior_yaw_stddev: 0.00001
+# Prior standard deviation on the target's velocity [m/s].
+prior_vel_x_stddev: 0.001
+prior_vel_y_stddev: 0.001
+prior_vel_z_stddev: 0.1
+# ------------- PRIORS -------------
+
+# ------------- NOISE --------------
+# USBL position noise.
+usbl_x_stddev: 7.5
+usbl_y_stddev: 7.5
+usbl_z_stddev: 2.0
+# Optical measurement noise.
+optical_trans_stddev: 0.1 # [m]
+optical_rot_stddev: 0.005 # 5 deg in [rad]
+# Altitude of SBG above the waterline is 1.55m, but since our reference
+# is LoLo's INS, which measures 0 at the surface but the INS ref point
+# lies ca. 0.5m below it, we add this as an offset to the altitude meas.
+manual_altitude: 1.85  # [m]
+manual_altitude_stddev: 0.15 # [m]
+# Initial Bias (if previously estimated)
+init_accel_bias_x: 0.0878879973
+init_accel_bias_y: -0.859735508
+init_accel_bias_z: -0.0378971757
+init_omega_bias_x: 0.002347238259
+init_omega_bias_y: -0.000747361312
+init_omega_bias_z: 0.000416164416
+# Initial Bias noise.
+init_accel_bias_stddev: 0.00158792708
+init_omega_bias_stddev: 0.00009722156
+# VALUES FOR SBG ELLIPSE A
+# Standard deviation for the linear acceleration measurements [m/s2].
+accel_noise_x: 0.00052925
+accel_noise_y: 0.00052925
+accel_noise_z: 0.00052925
+# Bias standard deviation for the linear acceleration measurements [m/s2]
+accel_bias_x: 0.00000872151
+accel_bias_y: 0.00000872151
+accel_bias_z: 0.00000872151
+# Standard deviation for the angular velocity measurements [???].
+omega_noise_x: 0.0000843214
+omega_noise_y: 0.0000843214
+omega_noise_z: 0.0000843214
+# Bias standard deviation for the angular velocity measurements [rad/s]
+omega_bias_x: 0.00000305698
+omega_bias_y: 0.00000305698
+omega_bias_z: 0.00000305698
+# Measurement frequency [Hz].
+imu_frequency: 25.0
+# ------------- NOISE --------------
+
+# ------------- EXTRINSICS --------------
+# Setup the sensor extrinsic calibrations. The extrinsic rotations are
+# built using gtsam::Rot3::RzRyRx, see their documentation for angle convention.
+# Angles increase counterclockwise when looking from the unchanged axis.
+# Rotation multiplication is done in yaw-pitch-roll convention.
+# Chaser's camera's extrinsic calibration params. base->camera.
+#camera_extrinsics_yaw: 1.5707 # [rad]
+#camera_extrinsics_pitch: -1.5707 # [rad]
+#camera_extrinsics_roll: 0.0 # [rad]
+camera_extrinsics_qx: -0.5
+camera_extrinsics_qy: -0.49995184
+camera_extrinsics_qz: 0.5
+camera_extrinsics_qw: 0.50004816
+camera_extrinsics_x: -0.6561        # [m]
+camera_extrinsics_y: 0.003        # [m]
+camera_extrinsics_z: 0.4935        # [m]
+# Chaser's usbl's extrinsic calibration. base->cusbl.
+ch_usbl_extrinsics_yaw: 0.0   # [rad]
+ch_usbl_extrinsics_pitch: 0.0 # [rad]
+ch_usbl_extrinsics_roll: 0.0 # [rad]
+ch_usbl_extrinsics_x: 1.6103  # [m]
+ch_usbl_extrinsics_y: 0.0966  # [m]
+ch_usbl_extrinsics_z: 0.4802  # [m]
+
+# target's fiducials's extrinsic calibration. sbg->fiducials center.
+#fiducials_extrinsics_yaw: -1.5707  # [rad]
+#fiducials_extrinsics_pitch: 1.5707 # [rad]
+#fiducials_extrinsics_roll: 0.0 # [rad]
+fiducials_extrinsics_qx: 0.5
+fiducials_extrinsics_qy: -0.49995184
+fiducials_extrinsics_qz: -0.5
+fiducials_extrinsics_qw: 0.50004816
+fiducials_extrinsics_x: 0.49        # [m]
+fiducials_extrinsics_y: 0.0        # [m]
+fiducials_extrinsics_z: 2.13        # [m]
+# target's usbl's extrinsic calibration. sbg->tusbl.
+tgt_usbl_extrinsics_yaw: 0.0      # [rad]
+tgt_usbl_extrinsics_pitch: 0.0    # [rad]
+tgt_usbl_extrinsics_roll: 3.14159 # [rad]
+tgt_usbl_extrinsics_x: 0.345        # [m]
+tgt_usbl_extrinsics_y: 0.0        # [m]
+tgt_usbl_extrinsics_z: 2.13        # [m]
+# ------------- EXTRINSICS --------------
+
+# ------ OUTLIERS --------------
+# Previously identified outliers in the data.
+#optical_outliers: [0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,
+        #13,  14,  15,  16,  17,  18,  19,  20,  22,  23,  24,  25,  26,
+        #27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,
+        #40,  41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,  52,
+        #53,  54,  55,  56,  57,  58,  59,  60,  61,  62,  63,  64,  65,
+        #66,  67,  68,  69,  70,  71,  72,  73,  74,  75,  76,  77,  78,
+        #79,  80,  81,  82,  94, 104, 105, 107, 108, 109, 110, 136, 137, 138,
+       #139, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153,
+       #154, 155, 156, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226,
+       #227, 228, 229, 230, 231, 232, 233, 234, 235, 282, 283, 284, 285,
+       #286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298,
+       #299, 300, 301, 302, 303, 304, 323, 330, 331, 332, 333, 334, 335,
+       #336, 337, 339, 340, 341, 345, 346, 351, 353, 354, 357, 358, 399,
+       #400, 401, 402, 455, 456, 457, 458, 486, 489, 493, 494, 545,546,547,549,550,551,552,553, 554, 555, 556, 557, 592,
+       #601, 603, 604, 606, 607, 608, 609, 610, 612, 617, 645, 646, 649, 650, 652, 653, 654,
+       #655, 656]
+#usbl_outliers: [0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,
+        #399, 400, 401, 402, 456, 458, 489, 493, 494, 557, 650, 653, 655]
+optical_outliers: []
+usbl_outlier: []
+
+
+
