@@ -154,6 +154,7 @@ set(UTILS_SRCS
   libs/utils/odometer.cpp
   libs/utils/csv_utils.cpp
   libs/utils/tfm_utils.cpp
+  libs/utils/ros_gtsam_utils.cpp
 )
 add_library(utils STATIC ${UTILS_SRCS})
 target_include_directories(utils PUBLIC libs)
@@ -168,23 +169,10 @@ target_include_directories(ros_eigen PUBLIC libs)
 target_compile_options(ros_eigen PRIVATE -Wall)
 target_link_libraries(ros_eigen ${catkin_LIBRARIES} gtsam)
 
-#set(ROS_GRAPH_UTILS_SRCS
-    #libs/utils/ros_graph_utils.cpp
-#)
-#add_library(ros_graph STATIC ${ROS_GRAPH_UTILS_SRCS})
-#target_include_directories(ros_graph PUBLIC libs)
-#target_compile_options(ros_graph PRIVATE -Wall)
-#target_link_libraries(ros_graph ${catkin_LIBRARIES} ros_eigen)
-
 add_executable(odometry_node src/odometry_node.cpp)
 add_dependencies(odometry_node ${catkin_EXPORTED_TARGETS})
 target_include_directories(odometry_node PUBLIC ./include/)
 target_link_libraries(odometry_node ${catkin_LIBRARIES} utils)
-
-#add_executable(optimize_dataset src/main.cpp)
-#add_dependencies(optimize_dataset ${catkin_EXPORTED_TARGETS})
-#target_include_directories(optimize_dataset PUBLIC ./include/)
-#target_link_libraries(optimize_dataset ${catkin_LIBRARIES} ros_eigen gtsam)
 
 add_executable(bag_to_pose_graph src/bag_to_pose_graph.cpp)
 add_dependencies(bag_to_pose_graph ${catkin_EXPORTED_TARGETS})
@@ -196,10 +184,10 @@ add_dependencies(tfm_tests ${catkin_EXPORTED_TARGETS})
 target_include_directories(tfm_tests PUBLIC ./include/)
 target_link_libraries(tfm_tests ${catkin_LIBRARIES} utils)
 
-#add_executable(test_node src/test_node.cpp)
-#add_dependencies(test_node ${catkin_EXPORTED_TARGETS})
-#target_include_directories(test_node PUBLIC ./include/)
-#target_link_libraries(test_node ${catkin_LIBRARIES} ros_eigen gtsam)
+add_executable(results_to_bag src/results_to_bag.cpp)
+add_dependencies(results_to_bag ${catkin_EXPORTED_TARGETS})
+target_include_directories(results_to_bag PUBLIC ./include/)
+target_link_libraries(results_to_bag ${catkin_LIBRARIES} utils gtsam)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

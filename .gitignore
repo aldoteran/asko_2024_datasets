@@ -218,5 +218,7 @@ cython_debug/
 .csv
 .dot
 
+debug/
+/ground_truthing/debug/
 results/
 ground_truthing/results/
