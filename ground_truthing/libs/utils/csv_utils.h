@@ -21,11 +21,12 @@ namespace csv_utils{
 
 void AppendOpticalKeyframe(std::vector<std::string> &csvdata,
                            const gtsam::Pose3 &meas, const gtsam::Pose3 &chaser,
-                           const gtsam::Pose3 &target, double stamp);
+                           const gtsam::Pose3 &target, double stamp,
+                           bool as_quat);
 
 void AppendUsblKeyframe(std::vector<std::string> &csvdata,
                         const gtsam::Point3 &meas, const gtsam::Pose3 &chaser,
-                        const gtsam::Pose3 &target, double stamp);
+                        const gtsam::Pose3 &target, double stamp, bool as_quat);
 
 void DataToCsvFile(const std::vector<std::string> &data,
                    const std::string &filename);

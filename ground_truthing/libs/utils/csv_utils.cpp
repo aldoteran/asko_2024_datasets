@@ -5,13 +5,12 @@ namespace csv_utils {
 
 void AppendOpticalKeyframe(std::vector<std::string> &csvdata,
                            const gtsam::Pose3 &meas, const gtsam::Pose3 &chaser,
-                           const gtsam::Pose3 &target, double stamp) {
+                           const gtsam::Pose3 &target, double stamp, bool as_quat) {
   // We have to make a really long string that will be the entire row of the
   // csv file.
   std::string row = std::to_string(stamp) + "," + std::to_string(OPTICAL) + ",";
 
-  // TODO: add argument.
-  if (false) {
+  if (as_quat) {
     // Poses are going to be added as quat + xyz.
     const gtsam::Quaternion q_meas = meas.rotation().toQuaternion();
     const gtsam::Quaternion q_chaser = chaser.rotation().toQuaternion();
@@ -33,45 +32,42 @@ void AppendOpticalKeyframe(std::vector<std::string> &csvdata,
            "," + std::to_string(q_target.z()) + "," +
            std::to_string(q_target.w()) + "," + std::to_string(target.x()) +
            "," + std::to_string(target.y()) + "," + std::to_string(target.z());
+  } else {
+    // Add meas pose.
+    const gtsam::Matrix m_m = meas.rotation().matrix();
+    row += std::to_string(m_m(0, 0)) + "," + std::to_string(m_m(0, 1)) + "," +
+           std::to_string(m_m(0, 2)) + "," + std::to_string(m_m(1, 1)) + "," +
+           std::to_string(m_m(1, 2)) + "," + std::to_string(m_m(2, 2)) + "," +
+           std::to_string(meas.x()) + "," + std::to_string(meas.y()) + "," +
+           std::to_string(meas.z()) + ",";
+    // Add chaser pose.
+    const gtsam::Matrix c_m = chaser.rotation().matrix();
+    row += std::to_string(c_m(0, 0)) + "," + std::to_string(c_m(0, 1)) + "," +
+           std::to_string(c_m(0, 2)) + "," + std::to_string(c_m(1, 0)) + "," +
+           std::to_string(c_m(1, 1)) + "," + std::to_string(c_m(1, 2)) + "," +
+           std::to_string(c_m(2, 0)) + "," + std::to_string(c_m(2, 1)) + "," +
+           std::to_string(c_m(2, 2)) + "," + std::to_string(chaser.x()) + "," +
+           std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) + ",";
+    // Add target pose.
+    const gtsam::Matrix t_m = target.rotation().matrix();
+    row += std::to_string(t_m(0, 0)) + "," + std::to_string(t_m(0, 1)) + "," +
+           std::to_string(t_m(0, 2)) + "," + std::to_string(t_m(1, 0)) + "," +
+           std::to_string(t_m(1, 1)) + "," + std::to_string(t_m(1, 2)) + "," +
+           std::to_string(t_m(2, 0)) + "," + std::to_string(t_m(2, 1)) + "," +
+           std::to_string(t_m(2, 2)) + "," + std::to_string(target.x()) + "," +
+           std::to_string(target.y()) + "," + std::to_string(target.z()) + ",";
   }
 
-  // Add meas pose.
-  const gtsam::Matrix m_m = meas.rotation().matrix();
-  row += std::to_string(m_m(0, 0)) + "," + std::to_string(m_m(0, 1)) +
-                 "," + std::to_string(m_m(0, 2)) + "," +
-                 std::to_string(m_m(1, 1)) + "," + std::to_string(m_m(1, 2)) +
-                 "," + std::to_string(m_m(2, 2)) + "," +
-                 std::to_string(meas.x()) + "," + std::to_string(meas.y()) +
-                 "," + std::to_string(meas.z()) + ",";
-
-  // Add chaser pose.
-  const gtsam::Matrix c_m = chaser.rotation().matrix();
-  row += std::to_string(c_m(0, 0)) + "," + std::to_string(c_m(0, 1)) + "," +
-         std::to_string(c_m(0, 2)) + "," + std::to_string(c_m(1, 0)) + "," +
-         std::to_string(c_m(1, 1)) + "," + std::to_string(c_m(1, 2)) + "," +
-         std::to_string(c_m(2, 0)) + "," + std::to_string(c_m(2, 1)) + "," +
-         std::to_string(c_m(2, 2)) + "," + std::to_string(chaser.x()) + "," +
-         std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) + ",";
-
-  // Add target pose.
-  const gtsam::Matrix t_m = target.rotation().matrix();
-  row += std::to_string(t_m(0, 0)) + "," + std::to_string(t_m(0, 1)) + "," +
-         std::to_string(t_m(0, 2)) + "," + std::to_string(t_m(1, 0)) + "," +
-         std::to_string(t_m(1, 1)) + "," + std::to_string(t_m(1, 2)) + "," +
-         std::to_string(t_m(2, 0)) + "," + std::to_string(t_m(2, 1)) + "," +
-         std::to_string(t_m(2, 2)) + "," + std::to_string(target.x()) + "," +
-         std::to_string(target.y()) + "," + std::to_string(target.z()) + ",";
 
   csvdata.push_back(row);
 }
 
 void AppendUsblKeyframe(std::vector<std::string> &csvdata,
                         const gtsam::Point3 &meas, const gtsam::Pose3 &chaser,
-                        const gtsam::Pose3 &target, double stamp) {
+                        const gtsam::Pose3 &target, double stamp, bool as_quat) {
   std::string row = std::to_string(stamp) + "," + std::to_string(USBL) + ",";
 
-  // TODO: add argument.
-  if (false){
+  if (as_quat){
       // Poses are going to be added as quat + xyz.
       const gtsam::Quaternion q_chaser = chaser.rotation().toQuaternion();
       const gtsam::Quaternion q_target = target.rotation().toQuaternion();
@@ -89,29 +85,27 @@ void AppendUsblKeyframe(std::vector<std::string> &csvdata,
              "," + std::to_string(q_target.z()) + "," +
              std::to_string(q_target.w()) + "," + std::to_string(target.x()) + "," +
              std::to_string(target.y()) + "," + std::to_string(target.z());
+  } else {
+    // Add measured usbl position. Add dummy orientation to the measurement.
+    row += "0,0,0,0,0,0,0,0,0," + std::to_string(meas.x()) + "," +
+           std::to_string(meas.y()) + "," + std::to_string(meas.z()) + ",";
+    // Add chaser pose.
+    const gtsam::Matrix c_m = chaser.rotation().matrix();
+    row += std::to_string(c_m(0, 0)) + "," + std::to_string(c_m(0, 1)) + "," +
+           std::to_string(c_m(0, 2)) + "," + std::to_string(c_m(1, 0)) + "," +
+           std::to_string(c_m(1, 1)) + "," + std::to_string(c_m(1, 2)) + "," +
+           std::to_string(c_m(2, 0)) + "," + std::to_string(c_m(2, 1)) + "," +
+           std::to_string(c_m(2, 2)) + "," + std::to_string(chaser.x()) + "," +
+           std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) + ",";
+    // Add target pose.
+    const gtsam::Matrix t_m = target.rotation().matrix();
+    row += std::to_string(t_m(0, 0)) + "," + std::to_string(t_m(0, 1)) + "," +
+           std::to_string(t_m(0, 2)) + "," + std::to_string(t_m(1, 0)) + "," +
+           std::to_string(t_m(1, 1)) + "," + std::to_string(t_m(1, 2)) + "," +
+           std::to_string(t_m(2, 0)) + "," + std::to_string(t_m(2, 1)) + "," +
+           std::to_string(t_m(2, 2)) + "," + std::to_string(target.x()) + "," +
+           std::to_string(target.y()) + "," + std::to_string(target.z()) + ",";
   }
-
-  // Add measured usbl position. Add dummy orientation to the measurement.
-  row += "0,0,0,0,0,0,0,0,0," + std::to_string(meas.x()) + "," +
-         std::to_string(meas.y()) + "," + std::to_string(meas.z()) + ",";
-
-  // Add chaser pose.
-  const gtsam::Matrix c_m = chaser.rotation().matrix();
-  row += std::to_string(c_m(0, 0)) + "," + std::to_string(c_m(0, 1)) + "," +
-         std::to_string(c_m(0, 2)) + "," + std::to_string(c_m(1, 0)) + "," +
-         std::to_string(c_m(1, 1)) + "," + std::to_string(c_m(1, 2)) + "," +
-         std::to_string(c_m(2, 0)) + "," + std::to_string(c_m(2, 1)) + "," +
-         std::to_string(c_m(2, 2)) + "," + std::to_string(chaser.x()) + "," +
-         std::to_string(chaser.y()) + "," + std::to_string(chaser.z()) + ",";
-
-  // Add target pose.
-  const gtsam::Matrix t_m = target.rotation().matrix();
-  row += std::to_string(t_m(0, 0)) + "," + std::to_string(t_m(0, 1)) + "," +
-         std::to_string(t_m(0, 2)) + "," + std::to_string(t_m(1, 0)) + "," +
-         std::to_string(t_m(1, 1)) + "," + std::to_string(t_m(1, 2)) + "," +
-         std::to_string(t_m(2, 0)) + "," + std::to_string(t_m(2, 1)) + "," +
-         std::to_string(t_m(2, 2)) + "," + std::to_string(target.x()) + "," +
-         std::to_string(target.y()) + "," + std::to_string(target.z()) + ",";
 
   csvdata.push_back(row);
 }
@@ -138,7 +132,7 @@ void ValuesToCsvFile(const gtsam::Values &values,
   for (size_t i = 0; i < size; i++) {
     const gtsam::Pose3 p = values.at<gtsam::Pose3>(X(i));
     // TODO: Make this into if in_quat.
-    if (false){
+    if (false) {
       const gtsam::Quaternion q = p.rotation().toQuaternion();
       const gtsam::Point3 t = p.translation();
       double s = timestamps.at(i);
@@ -147,29 +141,29 @@ void ValuesToCsvFile(const gtsam::Values &values,
                      std::to_string(q.w()) + "," + std::to_string(t.x()) + "," +
                      std::to_string(t.y()) + "," + std::to_string(t.z()));
     }
-      const gtsam::Point3 t = p.translation();
-      const gtsam::Matrix m = p.rotation().matrix();
-      double s = timestamps.at(i);
-      data.push_back(std::to_string(s) + "," + std::to_string(m(0, 0)) + "," +
-                     std::to_string(m(0, 1)) + "," + std::to_string(m(0, 2)) +
-                     "," + std::to_string(m(1, 0)) + "," +
-                     std::to_string(m(1, 1)) + "," + std::to_string(m(1, 2)) +
-                     "," + std::to_string(m(2, 0)) + "," +
-                     std::to_string(m(2, 1)) + "," + std::to_string(m(2, 2)) +
-                     "," + std::to_string(t.x()) + "," + std::to_string(t.y()) +
-                     "," + std::to_string(t.z()));
+    const gtsam::Point3 t = p.translation();
+    const gtsam::Matrix m = p.rotation().matrix();
+    double s = timestamps.at(i);
+    data.push_back(std::to_string(s) + "," + std::to_string(m(0, 0)) + "," +
+                   std::to_string(m(0, 1)) + "," + std::to_string(m(0, 2)) +
+                   "," + std::to_string(m(1, 0)) + "," +
+                   std::to_string(m(1, 1)) + "," + std::to_string(m(1, 2)) +
+                   "," + std::to_string(m(2, 0)) + "," +
+                   std::to_string(m(2, 1)) + "," + std::to_string(m(2, 2)) +
+                   "," + std::to_string(t.x()) + "," + std::to_string(t.y()) +
+                   "," + std::to_string(t.z()));
   }
-  std::string filename = path_to_data + "full_graph_results.csv";
+  std::string filename = path_to_data + "full_graph_results";
   std::cout << "Saving full graph results to " << filename << std::endl;
   DataToCsvFile(data, filename);
 
   if (!optical_frames.empty()) {
-    filename = path_to_data + "optical_keyframe_results.csv";
+    filename = path_to_data + "optical_keyframe_results";
     std::cout << "Saving optical keyframe results to " << filename << std::endl;
     SplitKeyframes(data, optical_frames, filename);
   }
   if (!usbl_frames.empty()) {
-    filename = path_to_data + "usbl_keyframe_results.csv";
+    filename = path_to_data + "usbl_keyframe_results";
     std::cout << "Saving usbl keyframe results to " << filename << std::endl;
     SplitKeyframes(data, usbl_frames, filename);
   }
