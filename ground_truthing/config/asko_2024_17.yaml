@@ -1,7 +1,7 @@
 # If you want the output to be verbose AF.
 debug: false
 # If you want to append the results to the rosbag.
-append_results: true
+append_results: false
 
 # ------------- PRIORS -------------
 # Standard deviation of the prior information's translation components [m].

@@ -275,19 +275,15 @@ void GraphManager::AddChaserRelativeOpticalPose(
   // Compose mean for factor in the world frame.
   const gtsam::Pose3 w_tfm_t =
       chaser_global_pose_ * c_tfm_cam_ * cam_tfm_fid * fid_tfm_t_ ;
-  // TODO:
-  std::cout << "Projected target pose:\n" << w_tfm_t << "\n";
-  std::cout << "chaser * cam\n " << chaser_global_pose_ * c_tfm_cam_ << "\n";
-  std::cout << "chaser * cam * meas\n "
-            << chaser_global_pose_ * c_tfm_cam_ * cam_tfm_fid << "\n";
   // Measurement noise.
   gtsam::noiseModel::Gaussian::shared_ptr meas_noise =
       gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
   // Compute factor noise.
   gtsam::noiseModel::Gaussian::shared_ptr factor_noise;
-  ComputeOpticalGlobalFactorNoise(
-      cam_tfm_fid, factor_noise, c_tfm_cam_, fid_tfm_t_,
-      /*meas_noise*/ optical_meas_noise_, chaser_global_noise_);
+  ComputeOpticalGlobalFactorNoise(cam_tfm_fid, w_tfm_t, chaser_global_pose_,
+                                  factor_noise, c_tfm_cam_, fid_tfm_t_,
+                                  /*meas_noise*/ optical_meas_noise_,
+                                  chaser_global_noise_);
   // Add factor to graph.
   graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(cur_frame_),
                                                           w_tfm_t, factor_noise);
@@ -532,16 +528,16 @@ gtsam::Values GraphManager::Optimize4Real() {
 }
 
 void GraphManager::Print() {
-  graph_.print("-----------FACTOR GRAPH----------");
+  graph_.print("-----------FACTOR GRAPH----------\n");
 }
 
 void GraphManager::PrintInitialEstimates() {
-  initial_estimates_.print("---------INITIAL ESTIMATES----------");
+  initial_estimates_.print("---------INITIAL ESTIMATES----------\n");
 }
 
 gtsam::Values GraphManager::PrintISAM2Results(const std::string &path_to_data){
     gtsam::Values results = isam2_.calculateBestEstimate();
-    results.print("------------- ISAM2 RESULTS -----------");
+    results.print("------------- ISAM2 RESULTS -----------\n");
 
     std::cout << " --------- MARGINAL COVARIANCE --------\n";
     std::cout << "imu bias cov: \n"

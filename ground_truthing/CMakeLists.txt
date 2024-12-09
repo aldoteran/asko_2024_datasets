@@ -184,11 +184,6 @@ add_dependencies(tfm_tests ${catkin_EXPORTED_TARGETS})
 target_include_directories(tfm_tests PUBLIC ./include/)
 target_link_libraries(tfm_tests ${catkin_LIBRARIES} utils)
 
-add_executable(results_to_bag src/results_to_bag.cpp)
-add_dependencies(results_to_bag ${catkin_EXPORTED_TARGETS})
-target_include_directories(results_to_bag PUBLIC ./include/)
-target_link_libraries(results_to_bag ${catkin_LIBRARIES} utils gtsam)
-
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure

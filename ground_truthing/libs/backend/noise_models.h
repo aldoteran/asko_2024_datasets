@@ -59,7 +59,8 @@ void ComputeUsblGlobalFactorNoise(
  *   fid_rot_T = fiducials to target extrinsics rotation.
  */
 void ComputeOpticalGlobalFactorNoise(
-    const gtsam::Pose3 &z,
+    const gtsam::Pose3 &z, const gtsam::Pose3 &init_pose,
+    const gtsam::Pose3 &chaser_pose,
     gtsam::noiseModel::Gaussian::shared_ptr &factor_noise,
     const gtsam::Pose3 &chaser_camera_extrinsics,
     const gtsam::Pose3 &target_fiducials_extrinsics,

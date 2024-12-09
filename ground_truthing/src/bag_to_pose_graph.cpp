@@ -238,7 +238,7 @@ int main(int argc, char *argv[]){
   size_t i = 0;
   // Main for loop. Here we'll get all the data and build the graph.
   BOOST_FOREACH (rosbag::MessageInstance const m, view) {
-    //if (i > 1000) {
+    //if (i > 50) {
       //break;
     //}
 
@@ -334,8 +334,8 @@ int main(int argc, char *argv[]){
         const Eigen::Matrix<double, 6, 6> cov =
             dockslam::Eigen6x6PoseCovFromPoseCov(optical_msg->pose);
         // Send to graph.
-        //gm_->AddChaserRelativeOpticalPose(
-            //pose, dockslam::GtsamPoseCovarianceFromRos(cov), stamp);
+        gm_->AddChaserRelativeOpticalPose(
+            pose, dockslam::GtsamPoseCovarianceFromRos(cov), stamp);
       }
     // ------- Chaser optical pose ---------
 
@@ -410,8 +410,6 @@ int main(int argc, char *argv[]){
                                          target_altitude_stddev};
         // Send to graph.
         gm_->AddTargetGps(gps_pos, gps_stddev, stamp);
-
-        i++;
       }
     // ------- Target gps position ---------
 
