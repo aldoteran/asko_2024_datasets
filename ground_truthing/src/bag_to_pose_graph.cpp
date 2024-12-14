@@ -323,11 +323,10 @@ int main(int argc, char *argv[]){
           auto gp = gtsam::Pose3(pose.matrix());
           auto q = gp.rotation().toQuaternion();
           std::cout.precision(16);
-          std::cout << ch_optical_count << "," << stamp << "," << q.x() << "," << q.y() << "," << q.z() << ","
+          std::cout << ch_optical_count - 1 << "," << stamp << "," << q.x() << "," << q.y() << "," << q.z() << ","
                     << q.w() << "," << t(0) << "," << t(1) << "," << t(2)
                     << "\n";
           continue;
-
         }
 
         // Get noise.
@@ -336,6 +335,7 @@ int main(int argc, char *argv[]){
         // Send to graph.
         gm_->AddChaserRelativeOpticalPose(
             pose, dockslam::GtsamPoseCovarianceFromRos(cov), stamp);
+
       }
     // ------- Chaser optical pose ---------
 
@@ -456,9 +456,8 @@ int main(int argc, char *argv[]){
   }
 
   gm_->Print();
-  const std::string path_to_data =
-      //"/home/aldoteran/docking_ws/src/asko_2024_datasets/ground_truthing/";
-      "/tmp/";
+  std::string path_to_data = "/tmp";
+  nh_.getParam("path_to_data", path_to_data);
   const gtsam::Values results = gm_->PrintISAM2Results(path_to_data);
 
   // Append the results to the rosbag if necessary.
