@@ -111,6 +111,21 @@ void GraphManager::SetupNoises() {
   // Usbl position noise.
   target_usbl_noise_ =
       gtsam::noiseModel::Diagonal::Sigmas(config_.usbl_noise_stddev);
+  if (config_.optimize_chaser){
+      // Adds a large uncertainty on the rotational stddevs since we're
+      // using a Pose3 between factor.
+      gtsam::Vector usbl_sigmas(6);
+      usbl_sigmas << 1e9, 1e9, 1e9, config_.usbl_noise_stddev(0),
+          config_.usbl_noise_stddev(1), config_.usbl_noise_stddev(2);
+      target_usbl_between_noise_ =
+          gtsam::noiseModel::Diagonal::Sigmas(usbl_sigmas);
+
+      // Very small prior noise on the chaser to anchor the graph.
+      gtsam::Vector chaser_sigmas(6);
+      chaser_sigmas << 0.0000001, 0.000001, 0.000001, 0.000001, 0.000001,
+          0.000001;
+      chaser_prior_noise_ = gtsam::noiseModel::Diagonal::Sigmas(chaser_sigmas);
+  }
 
   // IMU bias random walk.
   gtsam::Vector imu_bias_sigmas(6);
@@ -150,8 +165,7 @@ void GraphManager::SetupPriors() {
   const gtsam::Rot3 init_rot = gtsam::Rot3::Rz(true_heading_) *
                                gtsam::Rot3::Ry(true_pitch_) *
                                gtsam::Rot3::Rx(M_PI);
- gtsam::Rot3::Rz(true_heading_);
-  // gtsam::Rot3::RzRyRx(0.0, 0.0, target_odom_pose_.rotation().yaw());
+  gtsam::Rot3::Rz(true_heading_);
   const gtsam::Point3 init_pos = target_odom_pose_.translation();
   target_init_pose_ = gtsam::Pose3(init_rot, init_pos);
 
@@ -169,6 +183,13 @@ void GraphManager::SetupPriors() {
       V(0), target_vel_, target_init_vel_noise);
   graph_.emplace_shared<gtsam::PriorFactor<gtsam::imuBias::ConstantBias>>(
       B(0), imu_bias_, init_imu_bias_noise_);
+  if (config_.optimize_chaser) {
+    initial_estimates_.insert(C(0), chaser_measured_pose_);
+    graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(
+        C(0), chaser_measured_pose_, chaser_prior_noise_);
+    chaser_previous_pose_ = chaser_measured_pose_;
+    chaser_previous_noise_ = chaser_measured_noise_;
+  }
 
   // Prior timestamp at zero.
   timestamps_[cur_frame_] = 0.0;
@@ -195,8 +216,10 @@ void GraphManager::AddTargetGlobalState(
 void GraphManager::AddChaserGlobalPose(const Eigen::Affine3d &pose,
                                        const Eigen::Matrix<double, 6, 6> &cov,
                                        double stamp) {
-  chaser_global_pose_ = gtsam::Pose3(pose.matrix());
-  chaser_global_noise_ = gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
+  chaser_measured_pose_ = gtsam::Pose3(pose.matrix());
+  // FIXME: add a covariance scaling factor.
+  chaser_measured_noise_ =
+      gtsam::noiseModel::Gaussian::Covariance(cov.matrix() * 0.00005);
   chaser_pose_stamp_ = stamp;
 
   if (!is_chaser_init) {
@@ -223,6 +246,12 @@ void GraphManager::UpdateISAM2(){
   target_marginal_noise_ = gtsam::noiseModel::Gaussian::Covariance(
       isam2_.marginalCovariance(X(cur_frame_)));
 
+  if(config_.optimize_chaser){
+      chaser_optimized_pose_ = results.at<gtsam::Pose3>(C(cur_frame_));
+      chaser_marginal_noise_ = gtsam::noiseModel::Gaussian::Covariance(
+          isam2_.marginalCovariance(C(cur_frame_)));
+  }
+
   // Reset factor graph.
   graph_.resize(0);
   // Reset odometer integration.
@@ -231,6 +260,15 @@ void GraphManager::UpdateISAM2(){
   initial_estimates_.clear();
 
   std::cout << "(GraphManager) Optimized the graph!!" << std::endl;
+  std::cout << "(GraphManager) Target pose: \n" << target_global_pose_ << "\n";
+  std::cout << "(GraphManager) Target marginals noise: \n"
+            << target_marginal_noise_->covariance() << "\n";
+  if (config_.optimize_chaser) {
+    std::cout << "(GraphManager) Chaser pose: \n"
+              << chaser_optimized_pose_ << "\n";
+    std::cout << "(GraphManager) Chaser marginals noise: \n"
+              << chaser_marginal_noise_->covariance() << "\n";
+  }
 }
 
 void GraphManager::AddChaserRelativeOpticalPose(
@@ -259,7 +297,7 @@ void GraphManager::AddChaserRelativeOpticalPose(
   }
 
   // Simple outlier rejection, if Lolo is not underwater, ignore.
-  if (chaser_global_pose_.z() > -0.5) {
+  if (chaser_measured_pose_.z() > -0.5) {
     std::cout << "(AddOptical) Lolo is not underwater, prolly an outlier."
               << std::endl;
     return;
@@ -269,28 +307,47 @@ void GraphManager::AddChaserRelativeOpticalPose(
       std::cout << "IMU factor not ready! Skipping keyframe." << std::endl;
       return;
   }
-
   // Measurement to Pose3.
   const gtsam::Pose3 cam_tfm_fid(pose.matrix());
-  // Compose mean for factor in the world frame.
-  const gtsam::Pose3 w_tfm_t =
-      chaser_global_pose_ * c_tfm_cam_ * cam_tfm_fid * fid_tfm_t_ ;
   // Measurement noise.
   gtsam::noiseModel::Gaussian::shared_ptr meas_noise =
       gtsam::noiseModel::Gaussian::Covariance(cov.matrix());
-  // Compute factor noise.
-  gtsam::noiseModel::Gaussian::shared_ptr factor_noise;
-  ComputeOpticalGlobalFactorNoise(cam_tfm_fid, w_tfm_t, chaser_global_pose_,
-                                  factor_noise, c_tfm_cam_, fid_tfm_t_,
-                                  /*meas_noise*/ optical_meas_noise_,
-                                  chaser_global_noise_);
-  // Add factor to graph.
-  graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(X(cur_frame_),
-                                                          w_tfm_t, factor_noise);
+
+  // The optical factor can be added either as a betweenfactor (full SLAM)
+  // or a global optical factor(PoseSLAM).
+  if (config_.optimize_chaser){
+      // Measured relative pose.
+      const gtsam::Pose3 c_tfm_t = c_tfm_cam_ * cam_tfm_fid * fid_tfm_t_;
+      // BetweenFactor from chasers current pose to target's current pose.
+      graph_.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(
+          C(cur_frame_), X(cur_frame_), c_tfm_t, optical_meas_noise_);
+      // Add a between factor and initial conditions from the previous to the
+      // current chaser frame using the chaser's INS measurements.
+      AddChaserBetweenFactor(stamp);
+
+      std::cout << "Added optical pose:\n" << c_tfm_t << "\n";
+      std::cout << "with noise model: \n"
+                << optical_meas_noise_->covariance() << "\n";
+  } else{
+      // Add a global prior optical factor instead.
+      // Compose mean for factor in the world frame.
+      const gtsam::Pose3 w_tfm_t =
+          chaser_measured_pose_ * c_tfm_cam_ * cam_tfm_fid * fid_tfm_t_;
+      // Compute factor noise.
+      gtsam::noiseModel::Gaussian::shared_ptr factor_noise;
+      ComputeOpticalGlobalFactorNoise(
+          cam_tfm_fid, w_tfm_t, chaser_measured_pose_, factor_noise, c_tfm_cam_,
+          fid_tfm_t_,
+          /*meas_noise*/ optical_meas_noise_, chaser_measured_noise_);
+      // Add factor to graph.
+      graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(
+          X(cur_frame_), w_tfm_t, factor_noise);
+  }
 
   // Add a between factor and initial conditions from the previous to the
   // current frame using the imu preintegrated.
   AddImuBetweenFactor();
+
   // Add new keyframe.
   UpdateISAM2();
 
@@ -300,9 +357,8 @@ void GraphManager::AddChaserRelativeOpticalPose(
   cur_frame_++;
 
   // Logging.
-  csv_utils::AppendOpticalKeyframe(csvdata_, cam_tfm_fid,
-                                   chaser_global_pose_, target_odom_pose_,
-                                   stamp, /*as_quat=*/true);
+  csv_utils::AppendOpticalKeyframe(csvdata_, cam_tfm_fid, chaser_measured_pose_,
+                                   target_odom_pose_, stamp, /*as_quat=*/true);
 }
 
 void GraphManager::AddTargetUsblFix(const Eigen::Vector3d &pos, double stamp) {
@@ -311,52 +367,75 @@ void GraphManager::AddTargetUsblFix(const Eigen::Vector3d &pos, double stamp) {
   // boat's rotation wrt the world/map frame (W_rot_T), which we are estimating,
   // to express it in that frame (so we can add it as a uunary factor on the
   // boat's state), we have to add our own custom factor.
-  if (!is_chaser_init) {
-    std::cout << "Chaser not initialized yet." << std::endl;
-    return;
-  }
+  if (/*config_.no_usbl*/ true) {
+    if (!is_chaser_init) {
+      std::cout << "Chaser not initialized yet." << std::endl;
+      return;
+    }
 
-  // Check the timestamp difference. Half a second is too much.
-  if (std::abs(stamp - chaser_pose_stamp_) > 0.5) {
-    std::cout << "USBL and global pose are unsynced." << std::endl;
-    return;
-  }
+    // Check the timestamp difference. Half a second is too much.
+    if (std::abs(stamp - chaser_pose_stamp_) > 0.5) {
+      std::cout << "USBL and global pose are unsynced." << std::endl;
+      return;
+    }
 
-  if (!IsImuReady()){
+    if (!IsImuReady()) {
       std::cout << "IMU factor not ready! Skipping keyframe." << std::endl;
       return;
+    }
+    // Best guess for initial conditions for the target.
+    const gtsam::NavState prev_state(target_global_pose_, target_vel_);
+    const gtsam::NavState target_cur_state =
+        odometer_->predict(prev_state, imu_bias_);
+    const gtsam::Pose3 target_cur_pose = target_cur_state.pose();
+
+    // Add the USBL measurement as a relative position measurement from
+    // the target to the chaser if the chaser is to be optimized, otherwise
+    // add a global prior factor on the target's position.
+    if (config_.optimize_chaser) {
+      const gtsam::Rot3 t_rot_c = target_cur_pose.rotation().inverse() *
+                                  chaser_measured_pose_.rotation();
+      const gtsam::Point3 t_trans_c_t = t_tfm_tusbl_.translation() +
+                                        t_tfm_tusbl_.rotation() * pos -
+                                        t_rot_c * c_tfm_cusbl_.translation();
+      graph_.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(
+          X(cur_frame_), C(cur_frame_),
+          gtsam::Pose3(gtsam::Rot3(), t_trans_c_t), target_usbl_between_noise_);
+    } else {
+      // Measurement struct.
+      const UsblMeasurement meas = {gtsam::Point3(pos), chaser_measured_pose_,
+                                    c_tfm_cusbl_, t_tfm_tusbl_};
+      // Noise model for factor.
+      gtsam::noiseModel::Gaussian::shared_ptr factor_noise;
+      ComputeUsblGlobalFactorNoise(meas, target_cur_pose, factor_noise,
+                                   target_usbl_noise_, chaser_measured_noise_,
+                                   target_marginal_noise_);
+      // Add custom factor to graph.
+      graph_.emplace_shared<gtsam::UsblGlobalFactor>(X(cur_frame_), meas,
+                                                     factor_noise);
+    }
+
+    // Add a between factor and initial conditions from the previous to the
+    // current frame using the imu preintegrated.
+    AddImuBetweenFactor();
+
+    if (config_.optimize_chaser) {
+      // Add a between factor and initial conditions from the previous to the
+      // current chaser frame using the chaser's INS measurements.
+      AddChaserBetweenFactor(stamp);
+    }
+
+    // Add new keyframe.
+    UpdateISAM2();
+
+    // Bookkeeping.
+    timestamps_[cur_frame_] = stamp;
+    usbl_frames_.push_back(cur_frame_);
+    cur_frame_++;
   }
 
-  // Measurement struct.
-  const UsblMeasurement meas = {gtsam::Point3(pos), chaser_global_pose_,
-                                c_tfm_cusbl_, t_tfm_tusbl_};
-  // Best guess for initial conditions.
-  const gtsam::NavState prev_state(target_global_pose_, target_vel_);
-  const gtsam::NavState target_cur_state =
-      odometer_->predict(prev_state, imu_bias_);
-  const gtsam::Pose3 target_cur_pose = target_cur_state.pose();
-  // Noise model for factor.
-  gtsam::noiseModel::Gaussian::shared_ptr usbl_factor_noise;
-  ComputeUsblGlobalFactorNoise(meas, target_cur_pose, usbl_factor_noise,
-                               target_usbl_noise_, chaser_global_noise_,
-                               target_marginal_noise_);
-  // Add custom factor to graph.
-  graph_.emplace_shared<gtsam::UsblGlobalFactor>(X(cur_frame_), meas,
-                                                 usbl_factor_noise);
-
-  // Add a between factor and initial conditions from the previous to the
-  // current frame using the imu preintegrated.
-  AddImuBetweenFactor();
-  // Add new keyframe.
-  UpdateISAM2();
-
-  // Bookkeeping.
-  timestamps_[cur_frame_] = stamp;
-  usbl_frames_.push_back(cur_frame_);
-  cur_frame_++;
-
   csv_utils::AppendUsblKeyframe(csvdata_, gtsam::Point3(pos),
-                                chaser_global_pose_, target_odom_pose_,
+                                chaser_measured_pose_, target_odom_pose_,
                                 stamp, /*as_quat=*/true);
 }
 
@@ -383,13 +462,21 @@ void GraphManager::AddTargetGps(const Eigen::Vector3d &gps_pos,
 
   const gtsam::Point3 pos(gps_pos);
   gtsam::noiseModel::Diagonal::shared_ptr noise =
-      gtsam::noiseModel::Diagonal::Sigmas(stddev);
+      gtsam::noiseModel::Diagonal::Sigmas(stddev*5.0);
 
   graph_.emplace_shared<gtsam::GPSFactor>(X(cur_frame_), pos, noise);
   gps_in_ = true;
 
-  if(true){
+  // FIXME.
+  if (true) {
     AddImuBetweenFactor();
+
+    if (config_.optimize_chaser) {
+      // Add a between factor and initial conditions from the previous to the
+      // current chaser frame using the chaser's INS measurements.
+      AddChaserBetweenFactor(stamp);
+    }
+
     UpdateISAM2();
     hdt_in_ = false;
     gps_in_ = false;
@@ -434,6 +521,7 @@ void GraphManager::AddTargetHdt(double heading, double heading_stddev,
   // i.e. Pose3, so we're looking at [Rx, Ry, Rz, X, Y, Z]. Since we want
   // to constrain pitch and yaw, we use indices 1 and 2.
   std::vector<size_t> mask = {1, 2};
+  // FIXME: PartialPriorFactor doesn't seem to work!
   graph_.emplace_shared<gtsam::PartialPriorFactor<gtsam::Pose3>>(
       X(cur_frame_), mask, meas, noise);
   hdt_in_ = true;
@@ -442,6 +530,11 @@ void GraphManager::AddTargetHdt(double heading, double heading_stddev,
   // current frame using the imu preintegrated.
   if(gps_in_){
     AddImuBetweenFactor();
+    if (config_.optimize_chaser) {
+      // Add a between factor and initial conditions from the previous to the
+      // current chaser frame using the chaser's INS measurements.
+      AddChaserBetweenFactor(stamp);
+    }
     UpdateISAM2();
     gps_in_ = false;
     hdt_in_ = false;
@@ -479,6 +572,7 @@ void GraphManager::AddImuBetweenFactor(){
   initial_estimates_.insert(V(cur_frame_), target_state.velocity());
   initial_estimates_.insert(B(cur_frame_), imu_bias_);
 
+  // FIXME: Add a standalone calibration routine.
   // Uncomment for IMU bias calibration. Assumes zero movement to estimate
   // the IMU and gyro biases.
   //initial_estimates_.insert(X(cur_frame_), target_init_pose_);
@@ -496,6 +590,7 @@ void GraphManager::AddImuBetweenFactor(){
   // Adding the right translation but will try to avoid double counting it by
   // adding a large uncertainty to it. +- 5 degree uncertainty in the roll.
   gtsam::Vector target_attitude_diag(6);
+  // FIXME: add uncertainty as parameter in config file.
   target_attitude_diag << 0.0872, true_pitch_noise_, true_heading_noise_, 1e6,
       1e6, 1e6;
   graph_.emplace_shared<gtsam::PriorFactor<gtsam::Pose3>>(
@@ -507,6 +602,50 @@ void GraphManager::AddImuBetweenFactor(){
   graph_.emplace_shared<gtsam::CombinedImuFactor>(
       X(cur_frame_ - 1), V(cur_frame_ - 1), X(cur_frame_), V(cur_frame_),
       B(cur_frame_ - 1), B(cur_frame_), *odometer_);
+}
+
+void GraphManager::AddChaserBetweenFactor(double stamp){
+  if (std::abs(stamp - chaser_pose_stamp_) > 0.5) {
+    std::cout << "GPS stamp and chaser pose not synced!\n";
+  }
+
+  // Compute the relative pose between the most recent measured
+  // pose of the chaser and the last keyframe's measured pose.
+  const gtsam::Pose3 ci_tfm_cj =
+      chaser_previous_pose_.inverse() * chaser_measured_pose_;
+  // Compute the noise for the factor.
+  gtsam::noiseModel::Gaussian::shared_ptr factor_noise;
+  // FIXME: we're computing the relative noise without taking into account
+  // the correlation between pose i and pose j, so the result is a covariance
+  // which is bigger than that wrt either poses (which is incorrect). We
+  // need to consider the correlation to properly represent this covariance
+  // (as in Mangelson's paper).
+  ComputeRelativeTfmNoise(chaser_previous_pose_, chaser_measured_pose_,
+                          chaser_previous_noise_, chaser_measured_noise_,
+                          factor_noise);
+
+  std::cout << "prev chaser pose:\n" << chaser_previous_pose_ << "\n";
+  std::cout << "cur chaser pose:\n" << chaser_measured_pose_ << "\n";
+  std::cout << "prev pose * delta pose" << chaser_previous_pose_ * ci_tfm_cj
+            << "\n";
+
+  // Initial estimates are going to be the previously optimized pose
+  // composed by the delta T measured by the INS.
+  initial_estimates_.insert(
+      C(cur_frame_),
+      /*FIXME: chaser_optimized_pose_*/ chaser_previous_pose_ * ci_tfm_cj);
+
+  // Add between factor.
+  graph_.emplace_shared<gtsam::BetweenFactor<gtsam::Pose3>>(
+      C(cur_frame_ - 1), C(cur_frame_), ci_tfm_cj,
+      /*FIXME:factor_noise*/ chaser_measured_noise_);
+  // FIXME: Let's constrain the shit out of Lolo's depth.
+  graph_.emplace_shared<gtsam::DepthFactor>(
+      C(cur_frame_), chaser_measured_pose_.z(),
+      gtsam::noiseModel::Isotropic::Sigma(1, 0.000001));
+
+  chaser_previous_pose_ = chaser_measured_pose_;
+  chaser_previous_noise_ = chaser_measured_noise_;
 }
 
 void GraphManager::SaveGraph(std::ofstream &filename) {
@@ -547,7 +686,8 @@ gtsam::Values GraphManager::PrintISAM2Results(const std::string &path_to_data){
     std::cout << "target vel cov: \n"
               << isam2_.marginalCovariance(V(cur_frame_ - 1)) << "\n";
 
-    csv_utils::ValuesToCsvFile(results, timestamps_, path_to_data, optical_frames_,
+    csv_utils::ValuesToCsvFile(results, timestamps_, path_to_data,
+                               config_.optimize_chaser, optical_frames_,
                                usbl_frames_);
 
     return results;

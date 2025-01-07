@@ -26,6 +26,7 @@
 #include "utils/csv_utils.h"
 #include "backend/usbl_measurement.h"
 #include "backend/usbl_global_factor.h"
+#include "backend/depth_factor.h"
 #include "backend/noise_models.h"
 
 #include <vector>
@@ -35,6 +36,7 @@
 using gtsam::symbol_shorthand::X; // Target's pose to optimize.
 using gtsam::symbol_shorthand::V; // Target's velocity to optimize.
 using gtsam::symbol_shorthand::B; // Target's imu bias to optimize.
+using gtsam::symbol_shorthand::C; // Chaser's pose to optimize.
 
 namespace dockslam {
 /*!
@@ -44,6 +46,7 @@ namespace dockslam {
 class GraphManager {
 public:
   struct Config {
+    bool optimize_chaser; // Flag to toggle between full SLAM or pose-SLAM.
     gtsam::Vector6 target_init_pose_stddev; // [r,p,y,x,y,z] [rad,m]
     gtsam::Vector3 target_init_vel_stddev;  // [x,y,z] [m]
     gtsam::Vector3 imu_accel_noise_stddev;
@@ -94,6 +97,11 @@ public:
   void AddChaserGlobalPose(const Eigen::Affine3d &pose,
                            const Eigen::Matrix<double, 6, 6> &cov,
                            double stamp);
+
+  // Add a BetweenFactor between chaser variable nodes by
+  // calculating a delta transfrom from prev GPS time to cur
+  // GPS time.
+  void AddChaserBetweenFactor(double stamp);
 
   // Update iSAM2 with the current keyframe and optimize.
   void UpdateISAM2();
@@ -167,9 +175,17 @@ private:
   // Values to capture initial estimates for the new nodes.
   gtsam::Values initial_estimates_;
 
-  // Contains the latest of the chaser global poses.
-  gtsam::Pose3 chaser_global_pose_;
-  gtsam::noiseModel::Gaussian::shared_ptr chaser_global_noise_;
+  // Contains the latest (measured) the chaser global poses.
+  gtsam::Pose3 chaser_measured_pose_;
+  // Contains the previous measured pose used for keyframing.
+  gtsam::Pose3 chaser_previous_pose_;
+  // Contains the latest optimized chaser global pose.
+  gtsam::Pose3 chaser_optimized_pose_;
+  // Chaser's estimated pose's marginal covariance.
+  gtsam::noiseModel::Gaussian::shared_ptr chaser_marginal_noise_;
+  gtsam::noiseModel::Gaussian::shared_ptr chaser_measured_noise_;
+  gtsam::noiseModel::Gaussian::shared_ptr chaser_previous_noise_;
+  gtsam::noiseModel::Gaussian::shared_ptr chaser_prior_noise_;
   double chaser_pose_stamp_ = 0;
 
   // HDT heading and pitch measurement for initialization.
@@ -195,6 +211,8 @@ private:
   gtsam::noiseModel::Diagonal::shared_ptr target_vel_noise_;
   // Target's usbl manually tuned uncertainty.
   gtsam::noiseModel::Diagonal::shared_ptr target_usbl_noise_;
+  // Target's usbl manually tuned uncertainty (6DoF).
+  gtsam::noiseModel::Diagonal::shared_ptr target_usbl_between_noise_;
   // Chaser's optical relative pose's manually tuned uncertainty.
   gtsam::noiseModel::Diagonal::shared_ptr optical_meas_noise_;
   // Target's preint imu odometer.
@@ -232,6 +250,8 @@ private:
 
   // Raw measruements by keyframe for csv file.
   std::vector<std::string> csvdata_;
+  // New baseline measruements by keyframe for csv file.
+  std::vector<std::string> chaser_csvdata_;
   // Optical keyframe indices.
   std::vector<int> optical_frames_;
   // USBL keyframe indices.
