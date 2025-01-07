@@ -143,6 +143,7 @@ set(BACKEND_SRCS
     libs/backend/graph_manager.cpp
     libs/backend/usbl_global_factor.cpp
     libs/backend/noise_models.cpp
+    libs/backend/depth_factor.cpp
 )
 add_library(backend STATIC ${BACKEND_SRCS})
 target_include_directories(backend PUBLIC libs)
