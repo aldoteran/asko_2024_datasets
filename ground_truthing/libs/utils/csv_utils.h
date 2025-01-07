@@ -16,6 +16,7 @@
 #define USBL 2
 
 using gtsam::symbol_shorthand::X; // Target's pose.
+using gtsam::symbol_shorthand::C; // Chaser's pose.
 
 namespace csv_utils{
 
@@ -33,7 +34,7 @@ void DataToCsvFile(const std::vector<std::string> &data,
 
 void ValuesToCsvFile(const gtsam::Values &values,
                      const std::map<int, double> &timestamps,
-                     const std::string &path_to_data,
+                     const std::string &path_to_data, bool optimized_chaser,
                      const std::vector<int> &optical_frames = {},
                      const std::vector<int> &usbl_frames = {});
 

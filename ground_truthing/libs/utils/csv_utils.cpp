@@ -122,15 +122,21 @@ void DataToCsvFile(const std::vector<std::string> &data,
 
 void ValuesToCsvFile(const gtsam::Values &values,
                      const std::map<int, double> &timestamps,
-                     const std::string &path_to_data,
-                     const std::vector<int> &optical_frames ,
+                     const std::string &path_to_data, bool optimized_chaser,
+                     const std::vector<int> &optical_frames,
                      const std::vector<int> &usbl_frames) {
-  size_t size = values.size() / 3;
+  size_t size;
+  if (optimized_chaser) {
+    size = values.size() / 4;
+  } else {
+    size = values.size() / 3;
+  }
 
   std::vector<std::string> data;
   data.reserve(size + 1);
   for (size_t i = 0; i < size; i++) {
-    const gtsam::Pose3 p = values.at<gtsam::Pose3>(X(i));
+    std::string row;
+    gtsam::Pose3 p = values.at<gtsam::Pose3>(X(i));
     // TODO: Make this into if in_quat.
     if (false) {
       const gtsam::Quaternion q = p.rotation().toQuaternion();
@@ -141,17 +147,29 @@ void ValuesToCsvFile(const gtsam::Values &values,
                      std::to_string(q.w()) + "," + std::to_string(t.x()) + "," +
                      std::to_string(t.y()) + "," + std::to_string(t.z()));
     }
-    const gtsam::Point3 t = p.translation();
-    const gtsam::Matrix m = p.rotation().matrix();
+    gtsam::Point3 t = p.translation();
+    gtsam::Matrix m = p.rotation().matrix();
     double s = timestamps.at(i);
-    data.push_back(std::to_string(s) + "," + std::to_string(m(0, 0)) + "," +
-                   std::to_string(m(0, 1)) + "," + std::to_string(m(0, 2)) +
-                   "," + std::to_string(m(1, 0)) + "," +
-                   std::to_string(m(1, 1)) + "," + std::to_string(m(1, 2)) +
-                   "," + std::to_string(m(2, 0)) + "," +
-                   std::to_string(m(2, 1)) + "," + std::to_string(m(2, 2)) +
-                   "," + std::to_string(t.x()) + "," + std::to_string(t.y()) +
-                   "," + std::to_string(t.z()));
+    row = std::to_string(s) + "," + std::to_string(m(0, 0)) + "," +
+          std::to_string(m(0, 1)) + "," + std::to_string(m(0, 2)) + "," +
+          std::to_string(m(1, 0)) + "," + std::to_string(m(1, 1)) + "," +
+          std::to_string(m(1, 2)) + "," + std::to_string(m(2, 0)) + "," +
+          std::to_string(m(2, 1)) + "," + std::to_string(m(2, 2)) + "," +
+          std::to_string(t.x()) + "," + std::to_string(t.y()) + "," +
+          std::to_string(t.z());
+
+    if (optimized_chaser) {
+      gtsam::Pose3 p = values.at<gtsam::Pose3>(C(i));
+      gtsam::Point3 t = p.translation();
+      gtsam::Matrix m = p.rotation().matrix();
+      row += "," + std::to_string(m(0, 0)) + "," + std::to_string(m(0, 1)) +
+             "," + std::to_string(m(0, 2)) + "," + std::to_string(m(1, 0)) +
+             "," + std::to_string(m(1, 1)) + "," + std::to_string(m(1, 2)) +
+             "," + std::to_string(m(2, 0)) + "," + std::to_string(m(2, 1)) +
+             "," + std::to_string(m(2, 2)) + "," + std::to_string(t.x()) + "," +
+             std::to_string(t.y()) + "," + std::to_string(t.z());
+    }
+    data.push_back(row);
   }
   std::string filename = path_to_data + "full_graph_results";
   std::cout << "Saving full graph results to " << filename << std::endl;

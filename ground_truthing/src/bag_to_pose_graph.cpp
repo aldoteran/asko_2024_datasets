@@ -51,6 +51,9 @@ Eigen::Matrix2d ToRotMatrix(const double angle_rad) {
 }
 
 void SetupConfig(dockslam::GraphManager::Config &config, ros::NodeHandle &nh) {
+  // PoseSLAM or Full SLAM.
+  nh.getParam("optimize_chaser", config.optimize_chaser);
+
   // Priors.
   nh.getParam("prior_roll_stddev", config.target_init_pose_stddev(0));
   nh.getParam("prior_pitch_stddev", config.target_init_pose_stddev(1));
@@ -235,10 +238,11 @@ int main(int argc, char *argv[]){
   double UTM_Y = 6523400.5;
 
   bool is_first_target_odom = true;
+  bool new_gps = false;
   size_t i = 0;
   // Main for loop. Here we'll get all the data and build the graph.
   BOOST_FOREACH (rosbag::MessageInstance const m, view) {
-    //if (i > 50) {
+    //if (i > 10) {
       //break;
     //}
 
@@ -291,6 +295,16 @@ int main(int argc, char *argv[]){
         // Send to graph.
         gm_->AddChaserGlobalPose(
             pose, dockslam::GtsamPoseCovarianceFromRos(cov), stamp);
+
+        if (true) {
+          if (new_gps) {
+            auto t = pose.translation();
+            std::cout.precision(16);
+            std::cout << ch_optical_count - 1 << ","
+                      << "," << t(0) << "," << t(1) << "\n";
+            new_gps = false;
+          }
+        }
       }
     // ------- Chaser global navigation ---------
 
@@ -306,8 +320,8 @@ int main(int argc, char *argv[]){
         auto found = std::find(optical_outliers.begin(), optical_outliers.end(),
                                ch_optical_count - 1);
         if (found != optical_outliers.end()) {
-          std::cout << "Filtering optical outlier at idx " << ch_optical_count - 1
-                    << "\n";
+          std::cout << "Filtering optical outlier at idx "
+                    << ch_optical_count - 1 << "\n";
           continue;
         }
 
@@ -323,9 +337,9 @@ int main(int argc, char *argv[]){
           auto gp = gtsam::Pose3(pose.matrix());
           auto q = gp.rotation().toQuaternion();
           std::cout.precision(16);
-          std::cout << ch_optical_count - 1 << "," << stamp << "," << q.x() << "," << q.y() << "," << q.z() << ","
-                    << q.w() << "," << t(0) << "," << t(1) << "," << t(2)
-                    << "\n";
+          std::cout << ch_optical_count - 1 << "," << stamp << "," << q.x()
+                    << "," << q.y() << "," << q.z() << "," << q.w() << ","
+                    << t(0) << "," << t(1) << "," << t(2) << "\n";
           continue;
         }
 
@@ -361,8 +375,7 @@ int main(int argc, char *argv[]){
 
         // Get position.
         Eigen::Vector3d position = dockslam::EigenPositionFromMarker(*usbl_msg);
-        // FIXME: Let's try to keep the measurements underwater.
-        //position(2) = std::abs(position(2)) * (-1);
+
         // Send to graph.
         gm_->AddTargetUsblFix(position, stamp);
       }
@@ -393,6 +406,7 @@ int main(int argc, char *argv[]){
           m.instantiate<sbg_driver::SbgGpsPos>();
       if (gps_msg != nullptr) {
         tgt_gps_count++;
+        new_gps = true;
 
         double stamp = gps_msg->header.stamp.toSec();
 
@@ -410,6 +424,13 @@ int main(int argc, char *argv[]){
                                          target_altitude_stddev};
         // Send to graph.
         gm_->AddTargetGps(gps_pos, gps_stddev, stamp);
+
+        if (debug) {
+          std::cout.precision(16);
+          std::cout << tgt_gps_count - 1 << "," << stamp << "," << x - UTM_X
+                    << "," << y - UTM_Y << "\n";
+          continue;
+        }
       }
     // ------- Target gps position ---------
 
@@ -456,7 +477,7 @@ int main(int argc, char *argv[]){
   }
 
   gm_->Print();
-  std::string path_to_data = "/tmp";
+  std::string path_to_data = "/tmp/";
   nh_.getParam("path_to_data", path_to_data);
   const gtsam::Values results = gm_->PrintISAM2Results(path_to_data);
 

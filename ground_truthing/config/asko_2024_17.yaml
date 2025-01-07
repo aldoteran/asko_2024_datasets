@@ -1,13 +1,17 @@
+# Path to save the created csv results.
+path_to_data: "/home/aldoteran/docking_ws/src/asko_2024_datasets/ground_truthing/results/17/"
 # If you want the output to be verbose AF.
 debug: false
 # If you want to append the results to the rosbag.
 append_results: false
+# If you want to do PoseSLAM or FullSLAM.
+optimize_chaser: true
 
 # ------------- PRIORS -------------
 # Standard deviation of the prior information's translation components [m].
 prior_x_stddev: 5.0
 prior_y_stddev: 5.0
-prior_z_stddev: 0.1
+prior_z_stddev: 1.0
 # Standard deviation of the prior information's rotation components [rad].
 prior_roll_stddev: 0.00001
 prior_pitch_stddev: 0.00001
@@ -19,18 +23,20 @@ prior_vel_z_stddev: 0.1
 # ------------- PRIORS -------------
 
 # ------------- NOISE --------------
+# GPS noise scaling (GPS tends to be overconfident).
+gps_noise_scaling: 5.0
 # USBL position noise.
 usbl_x_stddev: 7.5
 usbl_y_stddev: 7.5
-usbl_z_stddev: 2.0
+usbl_z_stddev: 5.0
 # Optical measurement noise.
-optical_trans_stddev: 0.1 # [m]
-optical_rot_stddev: 0.005 # 5 deg in [rad]
+optical_trans_stddev: 0.01 # [m]
+optical_rot_stddev: 0.01 # 5 deg in [rad]
 # Altitude of SBG above the waterline is 1.55m, but since our reference
 # is LoLo's INS, which measures 0 at the surface but the INS ref point
 # lies ca. 0.5m below it, we add this as an offset to the altitude meas.
 manual_altitude: 1.85  # [m]
-manual_altitude_stddev: 0.15 # [m]
+manual_altitude_stddev: 0.05 # [m]
 # Initial Bias (if previously estimated)
 init_accel_bias_x: 0.0628933
 init_accel_bias_y: -0.0250815118
@@ -43,17 +49,23 @@ init_accel_bias_stddev: 0.00450327
 init_omega_bias_stddev: 0.000080977
 # VALUES FOR SBG ELLIPSE A
 # Standard deviation for the linear acceleration measurements [m/s2].
-accel_noise_x: 0.00052925
-accel_noise_y: 0.00052925
-accel_noise_z: 0.00052925
+#accel_noise_x: 0.00052925
+#accel_noise_y: 0.00052925
+#accel_noise_z: 0.00052925
+accel_noise_x: 0.082925
+accel_noise_y: 0.082925
+accel_noise_z: 0.082925
 # Bias standard deviation for the linear acceleration measurements [m/s2]
 accel_bias_x: 0.00000872151
 accel_bias_y: 0.00000872151
 accel_bias_z: 0.00000872151
 # Standard deviation for the angular velocity measurements [???].
-omega_noise_x: 0.0000843214
-omega_noise_y: 0.0000843214
-omega_noise_z: 0.0000843214
+#omega_noise_x: 0.0000843214
+#omega_noise_y: 0.0000843214
+#omega_noise_z: 0.0000843214
+omega_noise_x: 0.00843214
+omega_noise_y: 0.00843214
+omega_noise_z: 0.00843214
 # Bias standard deviation for the angular velocity measurements [rad/s]
 omega_bias_x: 0.00000305698
 omega_bias_y: 0.00000305698

@@ -1,7 +1,7 @@
 # Path to save the created csv results.
 path_to_data: "/home/aldoteran/docking_ws/src/asko_2024_datasets/ground_truthing/results/19/"
 # If you want the output to be verbose AF.
-debug: true
+debug: false
 # If you want to append the results to the rosbag.
 append_results: false
 
