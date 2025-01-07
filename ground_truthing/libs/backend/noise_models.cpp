@@ -157,4 +157,22 @@ void ComputeOpticalGlobalFactorNoise(
   factor_noise = gtsam::noiseModel::Gaussian::Covariance(factor_cov);
 }
 
+void ComputeRelativeTfmNoise(
+    const gtsam::Pose3 &tfm_a, const gtsam::Pose3 &tfm_b,
+    const gtsam::noiseModel::Gaussian::shared_ptr &tfm_a_noise,
+    const gtsam::noiseModel::Gaussian::shared_ptr &tfm_b_noise,
+    gtsam::noiseModel::Gaussian::shared_ptr &factor_noise){
+
+    const gtsam::Matrix cov_a = tfm_a_noise->covariance();
+    const gtsam::Matrix cov_b = tfm_b_noise->covariance();
+
+    const gtsam::Matrix adj_b_inv = tfm_b.inverse().AdjointMap();
+    const gtsam::Matrix adj_a = tfm_a.AdjointMap();
+
+    const gtsam::Matrix factor_cov =
+        (adj_b_inv * adj_a) * cov_a * (adj_b_inv * adj_a).transpose() + cov_b;
+
+    factor_noise = gtsam::noiseModel::Gaussian::Covariance(factor_cov);
+}
+
 }  // namespace dockslam

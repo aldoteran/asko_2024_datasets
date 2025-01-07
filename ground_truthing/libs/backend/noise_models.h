@@ -67,6 +67,15 @@ void ComputeOpticalGlobalFactorNoise(
     const gtsam::noiseModel::Gaussian::shared_ptr &z_noise,
     const gtsam::noiseModel::Gaussian::shared_ptr &chaser_noise);
 
+// Uses the GTSAM Adjoints machinery to compute the noise distribution
+// for the relative pose T_ab = T_a^-1 T_b.
+// We follow the derivations in https://gtsam.org/2021/02/23/uncertainties-part3.html.
+void ComputeRelativeTfmNoise(
+    const gtsam::Pose3 &tfm_a, const gtsam::Pose3 &tfm_b,
+    const gtsam::noiseModel::Gaussian::shared_ptr &tfm_a_noise,
+    const gtsam::noiseModel::Gaussian::shared_ptr &tfm_b_noise,
+    gtsam::noiseModel::Gaussian::shared_ptr &factor_noise);
+
 } // namespace dockslam
 
 #endif  // BACKEND_NOISE_MODELS_H_
