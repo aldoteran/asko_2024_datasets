@@ -47,10 +47,6 @@ rendezvous with an AUV (chaser), with the goal of, for example, transferring dat
 link without the need to stop or hard-dock. Thus, throughout the experiments, both vehicles are
 (almost) always in motion.
 
-> [!NOTE]
-> TODO(aldoteran) would be nice to have a simplified figure with frames of references depicted
-> for both the AUV and the vessel (to make calibrations more intuitive to understand as well).
-
 As a surrogate for the mothership, we instrumented our service boat with (1) an SBG Ellipse-D
 AHRS for navigation data, (2) an Evologics SR17 USBL positioning system to track and communicate
 with the AUV during the long-distance phase, and (3) an array of BlueRobotics Lumen underwater lights
@@ -93,9 +89,6 @@ long- to terminal-phase proximity operation. We carried out the rendezvous maneu
 different manners: (1) following at acoustic distance and then closing up in a straight line, (2)
 following parallel to the AUV and then merging to present the lights to the camera, (3) intercept
 from a long distance and in an angle, and (4) combinations of the above.
-
-> [!NOTE]  
-> TODO(aldoteran): adding figure to pictorially depict (1), (2), (3), and (4) would be nice.
 
 #### Ground truthing
 To compute the so-called _ground truth_ in our datasets, we used a factor graph optimization
