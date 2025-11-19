@@ -1,9 +1,27 @@
 # Askö 2024 prox-ops datasets
 This repo serves as a compilation of information, links, and code
 that is relevant for the use and reproduction of the datasets
-gathered by Niklas Rolleberg, Clemens Deutsch, and Aldo Teran (from the 
+gathered by Niklas Rolleberg, Clemens Deutsch, and Aldo Terán Espinoza (from the 
 Centre for Naval Architecture at the KTH Royal Institute of Technology 
 in Sweden) using SMaRC's AUV LoLo at the Baltic Sea Center's Askölaboratoriet.
+
+The datasets contain both the raw measurements and _ground truth_ trajectories from our
+agents during a series of dynamic rendezvous (see below for a thorough description of 
+the scenario). The ground truth in the datasets was computed by following the 
+methods and procedure published in our paper:
+```
+@INPROCEEDINGS{11104553,
+  author={Terán Espinoza, Aldo and Terán Espinoza, Antonio and Deutsch, Clemens and Rolleberg, Niklas and Folkesson, John and Sigray, Peter and Kuttenkeuler, Jakob},
+  booktitle={OCEANS 2025 Brest},
+  title={A Consistent Dataset for Dynamic Underwater Proximity Operations},
+  year={2025},
+  volume={},
+  number={},
+  pages={01-09},
+  keywords={Navigation;Sea measurements;Optical variables measurement;Position measurement;Probabilistic logic;Trajectory;Vehicle dynamics;State estimation;Robots;Optimization;underwater docking;autonomous underwater vehicles;relative navigation;proximity operations;state estimation},
+  doi={10.1109/OCEANS58557.2025.11104553}}
+```
+If you use these datasets in your research, please use the reference above.
 
 ## Background
 The big picture of our research is to enable autonomous proximity operations using AUVs.
@@ -79,6 +97,12 @@ from a long distance and in an angle, and (4) combinations of the above.
 > [!NOTE]  
 > TODO(aldoteran): adding figure to pictorially depict (1), (2), (3), and (4) would be nice.
 
+#### Ground truthing
+To compute the so-called _ground truth_ in our datasets, we used a factor graph optimization
+method to jointly estimate the most consistent trajectories for both agents using all the
+available global and relative navigation measurements. These methods are described in
+detail in our publication cited above. 
+
 ## Description and instructions for reproducing the datasets
 
 The data consists of three different datasets composed of the merged rosbags of both vehicles.
@@ -101,6 +125,8 @@ The service boat's data follows:
 - `/imu/`: data from the SBG AHRS in standard rosmsgs.
 - `/service_boat/`: processed navigation and USBL data.
 
+Topics with prefix `/gt` are the computed 
+
 
 ### Instructions
 You have to make sure to have the following dependencies installed in your workspace:
@@ -117,11 +143,15 @@ and for the service boat
 - the asko-2024 branch of the [usbl\_tools](https://github.com/aldoteran/usbl_tools/tree/asko_2024) package.
 
 Download the datasets from our OneDrive server [here](https://kth-my.sharepoint.com/:f:/g/personal/aldot_ug_kth_se/ElmUbhEgi4hJmvrfleEpzFIB8VFTXjCV7zBi3iisAOBAOw?e=FyPgI3).
+> [!NOTE]  
+> We have issues hosting our datasets on the KTH OneDrive service, if the link above does not work,
+feel free to open an issue and we'll address it.
+
 Now, run a `roscore` in a separate terminal and get it out of the way. Set the rosparam `use_sim_time` to
 `true`. Next, run the RViz configuration from this repo:
 - `rviz -d /path/to/this/repo/config/asko_2024.rviz`
 
-For some reason that I don't understand, we must run the `robot_description` for both
+Run the `robot_description` for both
 vehicles in order to set up their TF trees (somehow they don't get set up from the rosbags):
 - `roslaunch lolo_description lolo_description.launch`
 
@@ -134,6 +164,17 @@ Finally, go ahead and `rosbag play` any of the datasets.
 If all of the above went smoothly, you'll see the following RViz screen.
 
 ![Example of the visualization of an arbitrary dataset using RViz.](figures/rviz_example.png)
+
+### ROS2 datasets.
+We have recently ported the datasets to ROS2 and have successfully worked with them
+on Humble. If you're interested in these feel free to raise an issue and we'll rework
+the instructions to guide ROS2 users as well.
+
+## How to contribute?
+We phrase this as a question since we don't particularly know how you can contribute towards 
+this. We are always open to suggestions and collaborations. Our aim with making this
+datasets public is for them to be helpful for anyone who wants to do research in the field.
+Please feel free to raise any issues, even if it's just to leave a comment or start a conversation.
 
 ## Known issues
 - The service boat's filtered navigation in the 2024-06-11-17-28-05 dataset is very noisy.
