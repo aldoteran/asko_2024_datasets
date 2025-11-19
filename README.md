@@ -118,7 +118,7 @@ The service boat's data follows:
 - `/imu/`: data from the SBG AHRS in standard rosmsgs.
 - `/service_boat/`: processed navigation and USBL data.
 
-Topics with prefix `/gt` are the computed 
+Topics with prefix `/gt` are the computed ground truth trajectories for LoLo and the service boat. 
 
 
 ### Instructions
