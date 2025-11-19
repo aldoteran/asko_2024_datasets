@@ -171,9 +171,6 @@ Please feel free to raise any issues, even if it's just to leave a comment or st
 
 ## Known issues
 - The service boat's filtered navigation in the 2024-06-11-17-28-05 dataset is very noisy.
-It has strange biases and drifts from time to time. Challenging to work with.
-
-- There are a couple of random frames being published to the tf server that should be removed 
-(a random odom to base\_link). The joint state publisher seems to have been publishing two different
-references for the actuators' tfs as well.
+It has strange biases and drifts from time to time. Challenging to work with. This is 
+widely discussed in our publication.
 
